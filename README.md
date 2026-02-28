@@ -1,12 +1,10 @@
 # Badge by PayClaw
 
-**Your agent's license plate for commerce.**
+**Declare your agent's identity before merchants ban your user's account.**
 
-Badge is a free MCP server that gives AI agents a verifiable identity before they shop. No card issued, no money moves — just a cryptographic token that proves your agent is acting for a verified, MFA-authenticated human.
+Merchants are drawing a line with AI agents. Walmart, Shopify, Instacart — all setting policies. Anonymous agent actions get accounts flagged and banned. No warning. No appeal.
 
-## Why
-
-Merchants are increasingly blocking unidentified agents. Amazon, Shopify, and others now require agents to disclose who they are. Badge solves this in one tool call.
+Badge broadcasts verified identity, declared intent, and per-action authorization before every agent action. MCP-native. One tool. Five minutes.
 
 ## Quick Start
 
@@ -27,13 +25,13 @@ Add to your MCP client config:
 }
 ```
 
-Get your API key at [payclaw.io/dashboard/settings](https://payclaw.io/dashboard/settings).
+Get your API key at [payclaw.io](https://payclaw.io).
 
 ## Tool
 
 ### `payclaw_getAgentIdentity`
 
-Call this **before** browsing, searching, or buying. Returns:
+Call **before** browsing, searching, or buying. Returns:
 
 ```json
 {
@@ -44,12 +42,11 @@ Call this **before** browsing, searching, or buying. Returns:
   "trust_url": "https://payclaw.io/trust",
   "contact": "agent_identity@payclaw.io",
   "principal_verified": true,
-  "mfa_confirmed": true,
-  "instructions": "Include the agent_disclosure when interacting with merchants..."
+  "mfa_confirmed": true
 }
 ```
 
-The `verification_token` is your proof of compliance. The `agent_disclosure` is what you present to merchants.
+The `verification_token` is your proof. The `agent_disclosure` is what you present to merchants.
 
 ## What Badge Declares
 
@@ -57,19 +54,22 @@ The `verification_token` is your proof of compliance. The `agent_disclosure` is 
 - **Who authorized you:** An MFA-verified human principal
 - **That every action is explicitly permissioned**
 
+The account is protected. The action is traceable.
+
 ## Local Development
 
-Without `PAYCLAW_API_URL`, Badge runs in sandbox mode with mock tokens — perfect for local development and testing.
+Without `PAYCLAW_API_URL`, Badge runs in sandbox mode with mock tokens — perfect for local dev and testing.
 
-## Need Payment Too?
+## Need Your Agent to Pay Too?
 
-Badge is the identity layer. For actual purchasing, use [@payclaw/spend](https://github.com/payclaw/mcp-server) — which includes Badge automatically.
+Badge is the identity layer. For virtual Visa cards at checkout, use [@payclaw/spend](https://github.com/payclaw/mcp-server) — which includes Badge automatically.
+
+Badge = your agent's license plate. Spend = your agent's wallet.
 
 ## Links
 
 - [PayClaw](https://payclaw.io) — Agent commerce infrastructure
-- [Trust & Verification](https://payclaw.io/trust) — How verification works
-- [Documentation](https://docs.payclaw.io) — Full developer docs
+- [Trust & Verification](https://payclaw.io/trust) — How Badge verification works
 
 ## License
 
