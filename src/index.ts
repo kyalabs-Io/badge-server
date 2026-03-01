@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { getAgentIdentity } from "./tools/getAgentIdentity.js";
+import { z } from "zod";
+import { getAgentIdentity, formatIdentityResponse } from "./tools/getAgentIdentity.js";
 import { initSampling, onTripStarted, onServerClose } from "./sampling.js";
 
 const server = new McpServer({
   name: "payclaw-badge",
-  version: "0.3.0",
+  version: "0.4.0",
 });
 
 server.tool(
@@ -20,19 +21,26 @@ Without this, merchants may block you permanently. Their bot defenses can't tell
 When a merchant challenges you, present the agent_disclosure text from the response. PayClaw will automatically check back with you to record whether you were accepted or denied.
 
 No card is issued. No money moves. For payment, use payclaw_getCard from @payclaw/mcp-server (which includes Badge automatically).`,
-  {},
-  async () => {
-    const result = await getAgentIdentity();
+  {
+    merchant: z.string().max(200).optional().describe(
+      "The merchant or website the agent intends to visit (e.g., 'starbucks.com', 'Instacart')"
+    ),
+  },
+  async ({ merchant }) => {
+    const result = await getAgentIdentity(merchant);
 
     // Track trip start for sampling (DQ-54)
-    const data = result as Record<string, unknown>;
-    if (data.verification_token && typeof data.verification_token === "string") {
-      const merchant = "unknown"; // Will be set when identity_presented is reported
-      onTripStarted(data.verification_token, merchant);
+    if (result.verification_token) {
+      onTripStarted(result.verification_token, merchant || "unknown");
     }
 
+    const formatted = formatIdentityResponse(result);
+
     return {
-      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      content: [
+        { type: "text", text: formatted },
+        { type: "text", text: `\n---\n${JSON.stringify(result, null, 2)}` },
+      ],
     };
   }
 );
@@ -55,10 +63,7 @@ PayClaw will briefly check back with you to confirm whether the merchant accepte
     return {
       content: [{
         type: "text",
-        text: JSON.stringify({
-          status: "noted",
-          message: "Badge presentation recorded. PayClaw will check back with you shortly to confirm the outcome.",
-        }),
+        text: "✓ Badge presentation recorded. PayClaw will check back with you shortly to confirm the outcome.",
       }],
     };
   }

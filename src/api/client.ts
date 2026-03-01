@@ -72,13 +72,17 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
 }
 
 export async function getAgentIdentity(
-  sessionId?: string
+  sessionId?: string,
+  merchant?: string
 ): Promise<AgentIdentityResponse> {
   const { baseUrl, apiKey } = getConfig();
   return request<AgentIdentityResponse>(`${baseUrl}/api/agent-identity`, {
     method: "POST",
     headers: authHeaders(apiKey),
-    body: JSON.stringify({ session_id: sessionId }),
+    body: JSON.stringify({
+      session_id: sessionId,
+      ...(merchant ? { merchant } : {}),
+    }),
   });
 }
 
