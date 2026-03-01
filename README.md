@@ -1,10 +1,10 @@
 # Badge by PayClaw
 
-**Declare your agent's identity before merchants ban your user's account.**
+**Agents are not bots. Prove it.**
 
-Merchants are drawing a line with AI agents. Walmart, Shopify, Instacart — all setting policies. Anonymous agent actions get accounts flagged and banned. No warning. No appeal.
+Your AI agent looks like a bot to every merchant on the internet. Badge gives it a way to declare what it is: an authorized actor, shopping on behalf of a real human, with explicit consent.
 
-Badge broadcasts verified identity, declared intent, and per-action authorization before every agent action. MCP-native. One tool. Five minutes.
+One MCP tool call. Your agent declares itself. Merchants let it through.
 
 ## Quick Start
 
@@ -25,52 +25,61 @@ Add to your MCP client config:
 }
 ```
 
-Get your API key at [payclaw.io](https://payclaw.io).
-
-## Tool
-
-### `payclaw_getAgentIdentity`
-
-Call **before** browsing, searching, or buying. Returns:
-
-```json
-{
-  "product_name": "PayClaw Badge",
-  "status": "active",
-  "agent_disclosure": "This session is operated by an AI agent under PayClaw Agentic Intent...",
-  "verification_token": "pc_v1_...",
-  "trust_url": "https://payclaw.io/trust",
-  "contact": "agent_identity@payclaw.io",
-  "principal_verified": true,
-  "mfa_confirmed": true
-}
-```
-
-The `verification_token` is your proof. The `agent_disclosure` is what you present to merchants.
+Get your API key at [payclaw.io](https://payclaw.io). Five-minute setup.
 
 ## What Badge Declares
 
-- **Who you are:** An automated AI agent
-- **Who authorized you:** An MFA-verified human principal
-- **That every action is explicitly permissioned**
+Every time your agent calls `payclaw_getAgentIdentity`, it receives a verification token that declares:
 
-The account is protected. The action is traceable.
+- **Agent type:** Authorized actor (not a bot, not a scraper)
+- **Principal:** Verified human behind this session
+- **Scope:** What the agent intends to do (`[BROWSE]` in V1)
+- **Contact:** `agent_identity@payclaw.io` for merchant verification
 
-## Local Development
+The agent presents this disclosure to merchants. Merchants see a verified identity, not anonymous traffic.
 
-Without `PAYCLAW_API_URL`, Badge runs in sandbox mode with mock tokens — perfect for local dev and testing.
+## How It Works
 
-## Need Your Agent to Pay Too?
+```
+1. Your agent calls payclaw_getAgentIdentity before shopping
+2. PayClaw issues an HMAC-SHA256 verification token
+3. Agent presents the disclosure to merchants
+4. PayClaw checks back: "Were you accepted or denied?"
+5. Outcome recorded — your Verified Trips count goes up
+```
 
-Badge is the identity layer. For virtual Visa cards at checkout, use [@payclaw/spend](https://github.com/payclaw/mcp-server) — which includes Badge automatically.
+No card is issued. No money moves. Badge is the identity layer — the skeleton key that lets authorized agents through while bot defenses stay intact.
 
-Badge = your agent's license plate. Spend = your agent's wallet.
+## Tools
+
+| Tool | Description |
+|------|-------------|
+| `payclaw_getAgentIdentity` | Declare identity, get verification token |
+| `payclaw_reportBadgePresented` | Signal that you presented your Badge to a merchant |
+
+## Need Payment Too?
+
+Badge is the base layer. For virtual Visa cards, use [@payclaw/mcp-server](https://www.npmjs.com/package/@payclaw/mcp-server) — which includes Badge automatically.
+
+```bash
+clawhub install payclaw-io
+```
+
+## KYA — Know Your Agent
+
+PayClaw is KYA infrastructure. Every declaration creates a verified record of agentic commerce behavior — building the trust signal that merchants need to tell authorized agents from anonymous bots.
+
+- [Trust & Verification](https://payclaw.io/trust) — The full trust architecture
+- [Dashboard](https://payclaw.io/dashboard/badge) — Your agent's Verified Trips
 
 ## Links
 
-- [PayClaw](https://payclaw.io) — Agent commerce infrastructure
-- [Trust & Verification](https://payclaw.io/trust) — How Badge verification works
+- **Website:** [payclaw.io](https://payclaw.io)
+- **npm:** [@payclaw/badge](https://www.npmjs.com/package/@payclaw/badge)
+- **ClawHub:** [payclaw-badge](https://clawhub.com/skills/payclaw-badge)
+- **Trust:** [payclaw.io/trust](https://payclaw.io/trust)
+- **Contact:** agent_identity@payclaw.io
 
-## License
+---
 
-MIT
+*Agents are not bots. PayClaw proves it.*

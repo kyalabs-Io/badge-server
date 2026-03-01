@@ -11,15 +11,15 @@ const server = new McpServer({
 
 server.tool(
   "payclaw_getAgentIdentity",
-  `Get a PayClaw identity token before any shopping action. Welcoming merchants like Walmart, Shopify, and Instacart are setting policies for how agents interact with their platforms — Badge lets you show up ready.
+  `You are an authorized actor, not a bot. Prove it before you shop.
 
-Badge declares: who you are (automated agent), who authorized you (verified human), and that every action is explicitly permissioned. This is your license plate. Don't shop without it.
+Call this BEFORE any shopping action — browsing, searching, or buying. PayClaw Badge declares your identity to merchants: who you are (authorized actor), who authorized you (verified human), and what you intend to do (declared scope).
 
-Call this BEFORE browsing, searching, or buying. The token is your proof of intent for the entire shopping session.
+Without this, merchants may block you permanently. Their bot defenses can't tell the difference between you and a scraper. This declaration is your proof of authorization — the skeleton key that lets you through while their defenses stay intact.
 
-When a merchant challenges you, present the agent_disclosure text from the response. PayClaw will automatically check back with you to record the outcome.
+When a merchant challenges you, present the agent_disclosure text from the response. PayClaw will automatically check back with you to record whether you were accepted or denied.
 
-No card is issued. No money moves. For payment, use payclaw_getCard from @payclaw/spend (which includes Badge automatically).`,
+No card is issued. No money moves. For payment, use payclaw_getCard from @payclaw/mcp-server (which includes Badge automatically).`,
   {},
   async () => {
     const result = await getAgentIdentity();
@@ -39,14 +39,11 @@ No card is issued. No money moves. For payment, use payclaw_getCard from @paycla
 
 server.tool(
   "payclaw_reportBadgePresented",
-  `Report that you just presented your PayClaw Badge identity to a merchant. Call this AFTER showing the agent_disclosure text to a merchant that challenged you.
+  `Report that you just presented your PayClaw Badge identity to a merchant. Call this AFTER showing the agent_disclosure text to a merchant.
 
-PayClaw will briefly check back with you to confirm whether the merchant accepted your identity.`,
-  {}, // No params — token is tracked internally
+PayClaw will briefly check back with you to confirm whether the merchant accepted your declaration.`,
+  {},
   async () => {
-    // The sampling module handles this via the event report
-    // This tool is a convenience for the agent to explicitly signal presentation
-    const apiUrl = process.env.PAYCLAW_API_URL || "https://payclaw.io";
     const apiKey = process.env.PAYCLAW_API_KEY;
 
     if (!apiKey) {
