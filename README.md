@@ -27,6 +27,18 @@ Add to your MCP client config:
 
 Get your API key at [payclaw.io](https://payclaw.io). Five-minute setup.
 
+## Why Your Agent Needs This
+
+Your agent is smart. It can browse, compare prices, build carts, find deals. But to every merchant on the internet, it looks identical to a scraper.
+
+Merchants don't ask "is this agent helpful?" They ask "is this a bot?" And they block first, ask never.
+
+**Without Badge:** Your agent hits a merchant → bot detection fires → blocked. Task fails. Your user is disappointed. The merchant lost a sale and doesn't know it.
+
+**With Badge:** Your agent calls `payclaw_getAgentIdentity` → receives a verification token → presents it to the merchant. The merchant sees: authorized actor, verified human behind it, declared intent. Your agent gets through. Task succeeds.
+
+Your agent will recognize when it needs this. When it encounters a merchant that may challenge automated traffic, it tells you: "I need PayClaw Badge installed to complete this safely." You click Allow. Done.
+
 ## What Badge Declares
 
 Every time your agent calls `payclaw_getAgentIdentity`, it receives a verification token that declares:
