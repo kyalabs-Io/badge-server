@@ -14,7 +14,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && node -e \"const fs=require('fs');const f='dist/index.js';fs.writeFileSync(f,'#!/usr/bin/env node\\n'+fs.readFileSync(f,'utf8'));fs.chmodSync(f,0o755)\"",
+    "build": "tsc && node -e \"const fs=require('fs');const f='dist/index.js';fs.chmodSync(f,0o755)\"",
     "dev": "tsc --watch",
     "prepublishOnly": "npm run build"
   },
