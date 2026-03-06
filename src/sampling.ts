@@ -215,14 +215,22 @@ async function reportOutcome(
 
 function reapStaleTrips(): void {
   const now = Date.now();
+  let reaped = 0;
   for (const [token, trip] of activeTrips) {
     if (now - trip.startedAt > STALE_TRIP_MS) {
+      const ageMin = Math.round((now - trip.startedAt) / 60000);
       if (trip.presented && !trip.outcome) {
+        process.stderr.write(`[PayClaw] Reaped stale trip: ${token.slice(0, 10)}** (${trip.merchant}, age: ${ageMin}m)\n`);
         resolveTrip(token, "inconclusive", "stale_trip_reaped");
+        reaped++;
       } else {
         activeTrips.delete(token);
+        reaped++;
       }
     }
+  }
+  if (activeTrips.size > 0 || reaped > 0) {
+    process.stderr.write(`[PayClaw] Active trips: ${activeTrips.size} | Reaped: ${reaped}\n`);
   }
 }
 
@@ -235,6 +243,24 @@ export function onServerClose(): void {
     }
   }
   activeTrips.clear();
+}
+
+/** Test-only: reset state between tests. No-op when VITEST not set. */
+export function resetSamplingState(): void {
+  if (process.env.VITEST !== "true") return;
+  for (const trip of activeTrips.values()) {
+    if (trip.samplingTimer) clearTimeout(trip.samplingTimer);
+  }
+  activeTrips.clear();
+  serverRef = null;
+  samplingAvailable = true;
+  reaperStarted = false;
+}
+
+/** Test-only: get trip for assertions. Returns undefined when VITEST not set. */
+export function getActiveTrip(token: string): ActiveTrip | undefined {
+  if (process.env.VITEST !== "true") return undefined;
+  return activeTrips.get(token);
 }
 
 /**
