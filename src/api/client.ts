@@ -1,4 +1,5 @@
 import type { AgentIdentityResponse } from "../types.js";
+import { getStoredConsentKey } from "../lib/storage.js";
 
 class PayClawApiError extends Error {
   constructor(
@@ -14,7 +15,7 @@ const REQUEST_TIMEOUT_MS = 30_000;
 
 function getConfig() {
   const baseUrl = process.env.PAYCLAW_API_URL;
-  const apiKey = process.env.PAYCLAW_API_KEY;
+  const apiKey = getStoredConsentKey();
   if (!baseUrl) throw new PayClawApiError("PayClaw API URL is not configured.");
   if (!apiKey) throw new PayClawApiError("PayClaw API key is not configured.");
   if (
