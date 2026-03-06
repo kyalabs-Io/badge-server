@@ -235,7 +235,7 @@ export function formatIdentityResponse(r: IdentityResult): string {
   } else if (r.spend_cta) {
     lines.push(``, `  ℹ️  ${r.spend_cta}`);
   } else {
-    lines.push(``, `  ℹ️  Identity only. Fund your wallet at payclaw.io to enable payments.`);
+    lines.push(``, `  ℹ️  Identity only. For agent payments, use @payclaw/mcp-server — payclaw.io/docs`);
   }
 
   return lines.join("\n");
