@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.5] - 2026-03-06 — Tier 5: Dependency Alignment
+
+### Changed
+- **F20**: Zod range widened from `^4.3.6` to `^3.24.0 || ^4.0.0` — matches mcp-server, improves npm deduplication for Zod 3.x consumers
+- **F21**: MCP SDK minimum pinned from `^1.0.0` to `^1.27.1` — ensures required protocol features are present
+
+### Refs
+- MCPDuro_Mar6 Tier 5
+
 ## [0.7.4] - 2026-03-06 — Tier 4: Data Quality & UX
 
 ### Fixed
