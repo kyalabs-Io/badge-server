@@ -4,7 +4,7 @@ import { verify, _resetCache, type PayClawIdentity } from "./verify.js";
 // ── Key pair generation ──
 
 let privateKey: CryptoKey;
-let publicJWK: JsonWebKey;
+let publicJWK: Record<string, unknown>;
 const KID = "test-key-v1";
 
 beforeAll(async () => {
