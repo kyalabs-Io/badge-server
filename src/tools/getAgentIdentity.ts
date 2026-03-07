@@ -1,7 +1,8 @@
-// Canonical: mcp-server | Synced: 0.7.3 | Do not edit in badge-server
+// Canonical: badge-server | Synced: PRD-3 | mcp-server syncs from here
 import * as api from "../api/client.js";
 import { getStoredConsentKey } from "../lib/storage.js";
 import { initiateDeviceAuth, pollForApproval } from "../lib/device-auth.js";
+import { fetchUCPManifest, findPayClawCapability, isVersionCompatible } from "../lib/ucp-manifest.js";
 
 const MOCK_TOKEN_PREFIX = "pc_v1_sand";
 
@@ -53,6 +54,14 @@ export interface IdentityResult {
   message?: string;
   /** Internal: activation flow — agent should display this to user */
   activation_required?: boolean;
+  /** UCP: merchant supports io.payclaw.common.identity */
+  ucpCapable?: boolean;
+  /** UCP: merchant requires PayClaw credential */
+  requiredByMerchant?: boolean;
+  /** UCP: checkout patch to merge into checkout payload */
+  checkoutPatch?: Record<string, unknown>;
+  /** UCP: warning when version mismatch etc. */
+  ucpWarning?: string;
 }
 
 let pendingActivation: Promise<IdentityResult> | null = null;
@@ -62,29 +71,70 @@ let pendingActivation: Promise<IdentityResult> | null = null;
  * When no consent key exists: initiates device flow, returns activation instructions,
  * polls in background. On approval, stores key. Next call uses stored key.
  */
-export async function getAgentIdentity(merchant?: string): Promise<IdentityResult> {
+export async function getAgentIdentity(merchant?: string, merchantUrl?: string): Promise<IdentityResult> {
   const consentKey = getStoredConsentKey();
+
+  let result: IdentityResult;
 
   // Backward compat: PAYCLAW_API_KEY set → use it, device flow never triggers
   if (consentKey && process.env.PAYCLAW_API_KEY) {
-    return callWithKey(consentKey, merchant);
-  }
-
-  // No key: initiate device flow (reuse pending to avoid duplicate pollers)
-  if (!consentKey) {
+    result = await callWithKey(consentKey, merchant);
+  } else if (!consentKey) {
+    // No key: initiate device flow (reuse pending to avoid duplicate pollers)
     if (pendingActivation) return pendingActivation;
     const p = startActivationFlow(merchant);
     pendingActivation = p;
     try {
-      const result = await p;
-      return result;
+      result = await p;
     } finally {
       pendingActivation = null;
     }
+  } else {
+    // Key from file/memory (OAuth token from device flow)
+    result = await callWithOAuthToken(consentKey, merchant);
   }
 
-  // Key from file/memory (OAuth token from device flow)
-  return callWithOAuthToken(consentKey, merchant);
+  // UCP enrichment: check merchant manifest when merchantUrl provided
+  if (merchantUrl && result.verification_token && result.status !== "activation_required") {
+    result = await enrichWithUCP(result, merchantUrl);
+  }
+
+  return result;
+}
+
+async function enrichWithUCP(result: IdentityResult, merchantUrl: string): Promise<IdentityResult> {
+  const manifest = await fetchUCPManifest(merchantUrl);
+  if (!manifest) {
+    return { ...result, ucpCapable: false };
+  }
+
+  const capability = findPayClawCapability(manifest);
+  if (!capability) {
+    return { ...result, ucpCapable: false };
+  }
+
+  if (!isVersionCompatible(capability.version)) {
+    return {
+      ...result,
+      ucpCapable: false,
+      ucpWarning: `version mismatch: merchant declares ${capability.version}`,
+    };
+  }
+
+  const checkoutPatch = {
+    "io.payclaw.common.identity": {
+      token: result.verification_token!,
+      kid: "payclaw-badge-v1",
+    },
+  };
+
+  return {
+    ...result,
+    ucpCapable: true,
+    requiredByMerchant: capability.required,
+    checkoutPatch,
+    instructions: "Merge checkoutPatch into your checkout payload, then call payclaw_reportBadgePresented with the merchantUrl and token.",
+  };
 }
 
 async function callWithKey(apiKey: string, merchant?: string): Promise<IdentityResult> {
