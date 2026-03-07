@@ -5,6 +5,8 @@ import { initiateDeviceAuth, pollForApproval } from "../lib/device-auth.js";
 import { fetchUCPManifest, findPayClawCapability, isVersionCompatible } from "../lib/ucp-manifest.js";
 
 const MOCK_TOKEN_PREFIX = "pc_v1_sand";
+/** Must match the kid in the JWKS published at payclaw.io/.well-known/ucp (BUILD 3 / PRD-1) */
+const PAYCLAW_KID = "payclaw-badge-v1";
 
 function getMockDisclosure(scope = "BROWSE"): string {
   return `This agent is using PayClaw Badge: Agent Intent for Ecommerce. The principal user token is a SHA-256 starting ${MOCK_TOKEN_PREFIX}***. Intent has been expressly user-authorized for this session for [${scope}]. For inquiries, please message agent_identity@payclaw.io`;
@@ -95,7 +97,7 @@ export async function getAgentIdentity(merchant?: string, merchantUrl?: string):
   }
 
   // UCP enrichment: check merchant manifest when merchantUrl provided
-  if (merchantUrl && result.verification_token && result.status !== "activation_required") {
+  if (merchantUrl && result.verification_token && !result.activation_required) {
     result = await enrichWithUCP(result, merchantUrl);
   }
 
@@ -124,7 +126,7 @@ async function enrichWithUCP(result: IdentityResult, merchantUrl: string): Promi
   const checkoutPatch = {
     "io.payclaw.common.identity": {
       token: result.verification_token!,
-      kid: "payclaw-badge-v1",
+      kid: PAYCLAW_KID,
     },
   };
 
@@ -279,6 +281,22 @@ export function formatIdentityResponse(r: IdentityResult): string {
     `  Disclosure (present to merchants):`,
     `  "${r.agent_disclosure}"`
   );
+
+  if (r.ucpCapable) {
+    lines.push(
+      ``,
+      `  UCP:         Supported`,
+      `  Required:    ${r.requiredByMerchant ? "Yes" : "No"}`,
+    );
+    if (r.instructions) {
+      lines.push(`  Action:      ${r.instructions}`);
+    }
+  } else if (r.ucpCapable === false) {
+    lines.push(``, `  UCP:         Not supported`);
+    if (r.ucpWarning) {
+      lines.push(`  Warning:     ${r.ucpWarning}`);
+    }
+  }
 
   if (r.spend_available) {
     lines.push(``, `  💳 Spend is available — call payclaw_getCard when ready to pay.`);

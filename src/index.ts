@@ -85,8 +85,15 @@ When Extended Auth is enabled, PayClaw checks back 7 seconds later. Otherwise, c
       "UCP checkout session ID if available"
     ),
   },
-  async ({ verification_token, merchant, merchantUrl, context }) =>
-    handleReportBadgePresented(verification_token, merchantUrl || merchant || "unknown", context)
+  async ({ verification_token, merchant, merchantUrl, context, checkoutSessionId }) => {
+    const resolvedMerchant = merchantUrl || merchant;
+    if (!resolvedMerchant) {
+      return {
+        content: [{ type: "text" as const, text: "✗ Error: merchantUrl or merchant is required." }],
+      };
+    }
+    return handleReportBadgePresented(verification_token, resolvedMerchant, context, checkoutSessionId);
+  }
 );
 
 server.tool(

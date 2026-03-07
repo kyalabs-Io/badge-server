@@ -34,7 +34,12 @@ function normalizeDomain(url: string): string {
     const u = new URL(url.endsWith("/") ? url.slice(0, -1) : url);
     return u.origin;
   } catch {
-    return url.replace(/\/+$/, "");
+    // Bare domain like "starbucks.com" — try with https://
+    try {
+      return new URL("https://" + url.replace(/\/+$/, "")).origin;
+    } catch {
+      return url.replace(/\/+$/, "");
+    }
   }
 }
 

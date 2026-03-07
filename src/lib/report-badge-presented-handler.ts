@@ -10,10 +10,11 @@ import { reportBadgePresented } from "./report-badge.js";
 export async function handleReportBadgePresented(
   verification_token: string,
   merchant: string,
-  context?: "arrival" | "addtocart" | "checkout" | "other"
+  context?: "arrival" | "addtocart" | "checkout" | "other",
+  checkoutSessionId?: string
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
   onIdentityPresented(verification_token, merchant);
-  await reportBadgePresented(verification_token, merchant, context);
+  await reportBadgePresented(verification_token, merchant, context, checkoutSessionId);
   return {
     content: [
       {
