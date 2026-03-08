@@ -6,6 +6,76 @@ Your AI agent looks like a bot to every merchant on the internet. Badge gives it
 
 One MCP tool call. Your agent declares itself. Merchants let it through.
 
+---
+
+## For Merchants
+
+Verify PayClaw agent badges at checkout. No API call, no PayClaw account, no integration fee.
+
+### Install
+
+```bash
+npm install @payclaw/badge
+```
+
+### Verify a badge
+
+```typescript
+import { verify } from '@payclaw/badge/verify'
+
+// Token arrives in the checkout payload under the PayClaw extension key
+const token = req.body['io.payclaw.common.identity']?.token
+const identity = await verify(token)
+
+if (identity) {
+  // Authorized agent — verified human principal behind this session
+  console.log(identity.userId)    // Human principal
+  console.log(identity.agentId)   // Agent identifier
+  console.log(identity.intent)    // Declared purchase intent
+  console.log(identity.scopes)    // Authorization scopes
+  // → Skip CAPTCHA, apply tier pricing, fast-track checkout
+}
+// null → no badge or invalid. Proceed as guest.
+```
+
+### What `verify()` does
+
+- Decodes the JWT locally (no network call to PayClaw)
+- Fetches signing keys once, caches for 1 hour
+- Verifies ES256 signature via Web Crypto API
+- Checks expiry with 30s clock tolerance
+- Returns `PayClawIdentity` or `null`. Never throws.
+
+### Return type: `PayClawIdentity`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | `string` | Human principal who authorized the agent |
+| `agentId` | `string` | Agent identifier |
+| `intent` | `string` | Declared purchase intent |
+| `scopes` | `string[]` | Authorization scopes |
+| `merchantDomain` | `string?` | Target merchant domain |
+| `issuedAt` | `number` | Token issued (Unix timestamp) |
+| `expiresAt` | `number` | Token expires (Unix timestamp) |
+| `kid` | `string` | Signing key ID |
+
+### Runtime compatibility
+
+- Node.js 18+
+- Cloudflare Workers
+- Any runtime with Web Crypto API
+
+### Full integration guide
+
+- [payclaw.io/merchants](https://payclaw.io/merchants) — Merchant documentation
+- [UCP extension spec](https://github.com/payclaw/ucp-agent-badge) — Manifest, schema, integration walkthrough
+
+---
+
+## For Agent Developers
+
+> Everything below is for developers building agents that use PayClaw.
+
 ## Quick Start
 
 Add to your MCP client config:
@@ -17,14 +87,19 @@ Add to your MCP client config:
       "command": "npx",
       "args": ["-y", "@payclaw/badge"],
       "env": {
-        "PAYCLAW_API_URL": "https://payclaw.io"
+        "PAYCLAW_API_KEY": "pk_live_your_key_here",
+        "PAYCLAW_API_URL": "https://www.payclaw.io"
       }
     }
   }
 }
 ```
 
-No API key required. On first use, your agent will show a code and URL — approve on your phone in one tap, and your Consent Key is stored. Optional: set `PAYCLAW_API_KEY` for existing accounts (backward compatible).
+Get your API key at [payclaw.io/dashboard/keys](https://www.payclaw.io/dashboard/keys). API keys don't expire.
+
+### Try without an account
+
+Omit `PAYCLAW_API_KEY` — on first use, your agent will show a verification code and URL. Approve on your phone to get a temporary session. When you're ready for a permanent setup, create an account and generate an API key.
 
 ### Node version
 
@@ -108,32 +183,6 @@ Without it, your agent reports outcomes via `payclaw_reportBadgeOutcome` when it
 | `payclaw_reportBadgePresented` | Signal that you presented your Badge to a merchant |
 | `payclaw_reportBadgeOutcome` | Report whether merchant accepted or denied the badge |
 | `payclaw_reportBadgeNotPresented` | Report that the badge was not presented |
-
-## For Merchants: Verify a Badge
-
-Badge is the package merchants install for local JWT verification — no API call to PayClaw, no uptime dependency.
-
-```bash
-npm install @payclaw/badge
-```
-
-```typescript
-import { verify } from '@payclaw/badge/verify'
-
-const identity = await verify(req.body['io.payclaw.common.identity']?.token)
-
-if (identity) {
-  // Verified — identity.userId, identity.agentId, identity.scopes, etc.
-  // Apply tier pricing, skip CAPTCHAs, fast-track checkout
-}
-// null = no badge or invalid — proceed as guest
-```
-
-`verify()` fetches PayClaw's JWKS once, caches for 1 hour, and verifies the ES256 signature locally via Web Crypto API. Zero runtime dependencies. Works in Node.js 18+ and Cloudflare Workers. Never throws — returns `null` on any error.
-
-Full verification docs + Python example: [github.com/payclaw/ucp-agent-badge](https://github.com/payclaw/ucp-agent-badge#merchant-verification)
-
----
 
 ## What's New (v0.8.0)
 
