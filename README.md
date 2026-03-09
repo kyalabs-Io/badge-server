@@ -10,7 +10,7 @@ One MCP tool call. Your agent declares itself. Merchants let it through.
 
 ## For Merchants
 
-Verify PayClaw agent badges at checkout. No API call, no PayClaw account, no integration fee.
+Verify PayClaw agent badges at checkout. No per-request API call, no PayClaw account, no integration fee.
 
 ### Install
 
@@ -59,11 +59,13 @@ if (identity) {
 | `expiresAt` | `number` | Token expires (Unix timestamp) |
 | `kid` | `string` | Signing key ID |
 
-### Runtime compatibility
+### Runtime compatibility (`verify()` only)
 
 - Node.js 18+
 - Cloudflare Workers
 - Any runtime with Web Crypto API
+
+> The Badge MCP server (agent side) requires Node.js 20+. The `verify()` function for merchant verification works on Node.js 18+.
 
 ### Full integration guide
 
@@ -168,7 +170,7 @@ When enabled, PayClaw checks back with your agent 7 seconds after badge presenta
 
 ```json
 "env": {
-  "PAYCLAW_API_URL": "https://payclaw.io",
+  "PAYCLAW_API_URL": "https://www.payclaw.io",
   "PAYCLAW_EXTENDED_AUTH": "true"
 }
 ```
