@@ -12,6 +12,8 @@ One MCP tool call. Your agent declares itself. Merchants let it through.
 
 Verify PayClaw agent badges at checkout. No per-request API call, no PayClaw account, no integration fee.
 
+> **Not on UCP yet?** See [Google's UCP Getting Started Guide](https://developers.google.com/merchant/ucp) to set up your merchant manifest, then come back here to add verification.
+
 ### Install
 
 ```bash
