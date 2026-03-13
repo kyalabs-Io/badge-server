@@ -8,6 +8,7 @@
 
 | File | Notes |
 |------|-------|
+| `src/lib/env.ts` | KYA_*/PAYCLAW_* env var resolution with deprecation warnings |
 | `src/lib/device-auth.ts` | fetchWithTimeout, HTTPS validation, interval sanitization |
 | `src/lib/storage.ts` | Shared auth storage |
 | `src/lib/report-badge.ts` | Badge reporting |

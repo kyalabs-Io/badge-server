@@ -1,6 +1,7 @@
 // Canonical: mcp-server | Synced: 0.7.3 | Structurally divergent — badge-only subset of mcp-server's client
 import type { AgentIdentityResponse } from "../types.js";
 import { getStoredConsentKey } from "../lib/storage.js";
+import { getEnvApiUrl } from "../lib/env.js";
 
 class BadgeApiError extends Error {
   constructor(
@@ -89,12 +90,12 @@ export async function getAgentIdentity(
 }
 
 export function isApiMode(): boolean {
-  return !!process.env.PAYCLAW_API_URL || !!getStoredConsentKey();
+  return !!getEnvApiUrl() || !!getStoredConsentKey();
 }
 
 /** Base URL for API calls. Defaults to https://kyalabs.io. Validates HTTPS for token safety. */
 export function getBaseUrl(): string {
-  const url = process.env.PAYCLAW_API_URL;
+  const url = getEnvApiUrl();
   if (url && url.trim().length > 0) {
     const trimmed = url.trim().replace(/\/+$/, "");
     if (trimmed.startsWith("https://") || trimmed.startsWith("http://localhost")) {
@@ -106,7 +107,7 @@ export function getBaseUrl(): string {
 
 /**
  * Call agent-identity with a Bearer token (API key or OAuth access token).
- * Used when consent key comes from device flow (OAuth token) instead of PAYCLAW_API_KEY.
+ * Used when consent key comes from device flow (OAuth token) instead of KYA_API_KEY.
  */
 export async function getAgentIdentityWithToken(
   baseUrl: string,

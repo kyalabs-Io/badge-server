@@ -15,12 +15,12 @@ Add to your MCP client config:
 ```json
 {
   "mcpServers": {
-    "payclaw-badge": {
+    "kyalabs-badge": {
       "command": "npx",
       "args": ["-y", "@kyalabs/badge"],
       "env": {
-        "PAYCLAW_API_KEY": "pk_live_your_key_here",
-        "PAYCLAW_API_URL": "https://kyalabs.io"
+        "KYA_API_KEY": "pk_live_your_key_here",
+        "KYA_API_URL": "https://kyalabs.io"
       }
     }
   }
@@ -31,7 +31,7 @@ Get your API key at [kyalabs.io/dashboard/keys](https://kyalabs.io/dashboard/key
 
 ### Try without an account
 
-Omit `PAYCLAW_API_KEY` — on first use, your agent will show a verification code and URL. Approve on your phone to get a temporary session. When you're ready for a permanent setup, create an account and generate an API key.
+Omit `KYA_API_KEY` — on first use, your agent will show a verification code and URL. Approve on your phone to get a temporary session. When you're ready for a permanent setup, create an account and generate an API key.
 
 ### Node version
 
@@ -57,11 +57,11 @@ Merchants don't ask "is this agent helpful?" They ask "is this a bot?" And they 
 
 **Without Badge:** Your agent hits a merchant → bot detection fires → blocked. Task fails. Your user is disappointed. The merchant lost a sale and doesn't know it.
 
-**With Badge:** Your agent calls `payclaw_getAgentIdentity` → receives a verification token → presents it to the merchant. The merchant sees: authorized actor, verified human behind it, declared intent. Your agent gets through. Task succeeds.
+**With Badge:** Your agent calls `kya_getAgentIdentity` → receives a verification token → presents it to the merchant. The merchant sees: authorized actor, verified human behind it, declared intent. Your agent gets through. Task succeeds.
 
 ## What Badge Declares
 
-Every time your agent calls `payclaw_getAgentIdentity`, it receives a UCP-compatible credential that declares:
+Every time your agent calls `kya_getAgentIdentity`, it receives a UCP-compatible credential that declares:
 
 - **Agent type:** Authorized actor (not a bot, not a scraper)
 - **Principal:** Verified human behind this session (Google or Apple SSO)
@@ -75,7 +75,7 @@ The agent presents this disclosure to merchants. Merchants see a verified identi
 ### First use (device auth)
 
 ```
-1. Your agent calls payclaw_getAgentIdentity
+1. Your agent calls kya_getAgentIdentity
 2. No key? Device auth flow triggers — code + URL appear in terminal
 3. You approve on your phone (Google or Apple, one tap)
 4. Consent Key stored — agent is authorized
@@ -85,11 +85,11 @@ The agent presents this disclosure to merchants. Merchants see a verified identi
 ### UCP-aware identity (with merchantUrl)
 
 ```
-1. Agent calls payclaw_getAgentIdentity({ merchantUrl: 'https://store.com' })
+1. Agent calls kya_getAgentIdentity({ merchantUrl: 'https://store.com' })
 2. kyaLabs fetches store.com/.well-known/ucp manifest
 3. If merchant declares io.kyalabs.common.identity → returns checkoutPatch
 4. Agent merges checkoutPatch into checkout payload
-5. Agent calls payclaw_reportBadgePresented({ merchantUrl, verification_token })
+5. Agent calls kya_reportBadgePresented({ merchantUrl, verification_token })
 6. Merchant verifies token locally (see UCP extension spec for verification)
 ```
 
@@ -101,21 +101,21 @@ When enabled, kyaLabs checks back with your agent 7 seconds after badge presenta
 
 ```json
 "env": {
-  "PAYCLAW_API_URL": "https://kyalabs.io",
-  "PAYCLAW_EXTENDED_AUTH": "true"
+  "KYA_API_URL": "https://kyalabs.io",
+  "KYA_EXTENDED_AUTH": "true"
 }
 ```
 
-Without it, your agent reports outcomes via `payclaw_reportBadgeOutcome` when it knows the result.
+Without it, your agent reports outcomes via `kya_reportBadgeOutcome` when it knows the result.
 
 ## Tools
 
 | Tool | Description |
 |------|-------------|
-| `payclaw_getAgentIdentity` | Declare identity, get UCP-compatible verification token |
-| `payclaw_reportBadgePresented` | Signal that you presented your Badge to a merchant |
-| `payclaw_reportBadgeOutcome` | Report whether merchant accepted or denied the badge |
-| `payclaw_reportBadgeNotPresented` | Report that the badge was not presented |
+| `kya_getAgentIdentity` | Declare identity, get UCP-compatible verification token |
+| `kya_reportBadgePresented` | Signal that you presented your Badge to a merchant |
+| `kya_reportBadgeOutcome` | Report whether merchant accepted or denied the badge |
+| `kya_reportBadgeNotPresented` | Report that the badge was not presented |
 
 ## What's New (v0.9.0)
 
@@ -150,7 +150,7 @@ kyaLabs is KYA infrastructure. Every declaration creates a verified record of ag
 - **Website:** [kyalabs.io](https://kyalabs.io)
 - **npm:** [@kyalabs/badge](https://www.npmjs.com/package/@kyalabs/badge)
 - **UCP Extension:** [github.com/kyalabs/ucp-agent-badge](https://github.com/kyalabs/ucp-agent-badge)
-- **ClawHub:** [payclaw-badge](https://clawhub.com/skills/payclaw-badge)
+- **ClawHub:** [kyalabs-badge](https://clawhub.com/skills/kyalabs-badge)
 - **Trust:** [kyalabs.io/trust](https://kyalabs.io/trust)
 - **Merchants:** [kyalabs.io/merchants](https://kyalabs.io/merchants)
 - **Contact:** agent_identity@kyalabs.io
