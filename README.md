@@ -1,4 +1,4 @@
-# Badge by PayClaw
+# Badge by kyaLabs
 
 **Agents are not bots. Prove it.**
 
@@ -20,14 +20,14 @@ Add to your MCP client config:
       "args": ["-y", "@payclaw/badge"],
       "env": {
         "PAYCLAW_API_KEY": "pk_live_your_key_here",
-        "PAYCLAW_API_URL": "https://www.payclaw.io"
+        "PAYCLAW_API_URL": "https://kyalabs.io"
       }
     }
   }
 }
 ```
 
-Get your API key at [payclaw.io/dashboard/keys](https://www.payclaw.io/dashboard/keys). API keys don't expire.
+Get your API key at [kyalabs.io/dashboard/keys](https://kyalabs.io/dashboard/keys). API keys don't expire.
 
 ### Try without an account
 
@@ -41,13 +41,13 @@ If you see engine or compatibility errors: `node -v` — install Node 20+ from [
 
 ## UCP Identity Linking
 
-Badge is a [UCP (Universal Commerce Protocol)](https://ucp.dev) Credential Provider. Merchants who declare the PayClaw identity extension signal to every UCP-compliant agent that authorized agents are preferred at their store.
+Badge is a [UCP (Universal Commerce Protocol)](https://ucp.dev) Credential Provider. Merchants who declare the kyaLabs identity extension signal to every UCP-compliant agent that authorized agents are preferred at their store.
 
-When your agent encounters a UCP merchant with PayClaw installed, it presents a cryptographic badge automatically — no extra steps.
+When your agent encounters a UCP merchant with Badge installed, it presents a cryptographic badge automatically — no extra steps.
 
-- Extension spec + schema: [github.com/payclaw/ucp-agent-badge](https://github.com/payclaw/ucp-agent-badge)
-- Merchant verification: [github.com/payclaw/ucp-agent-badge/reference](https://github.com/payclaw/ucp-agent-badge/tree/main/reference)
-- Merchant documentation: [payclaw.io/merchants](https://payclaw.io/merchants)
+- Extension spec + schema: [github.com/kyalabs/ucp-agent-badge](https://github.com/kyalabs/ucp-agent-badge)
+- Merchant verification: [github.com/kyalabs/ucp-agent-badge/reference](https://github.com/kyalabs/ucp-agent-badge/tree/main/reference)
+- Merchant documentation: [kyalabs.io/merchants](https://kyalabs.io/merchants)
 
 ## Why Your Agent Needs This
 
@@ -66,7 +66,7 @@ Every time your agent calls `payclaw_getAgentIdentity`, it receives a UCP-compat
 - **Agent type:** Authorized actor (not a bot, not a scraper)
 - **Principal:** Verified human behind this session (Google or Apple SSO)
 - **Assurance level:** `starter` / `regular` / `veteran` / `elite` based on verified trip history
-- **Contact:** `agent_identity@payclaw.io` for merchant verification
+- **Contact:** `agent_identity@kyalabs.io` for merchant verification
 
 The agent presents this disclosure to merchants. Merchants see a verified identity, not anonymous traffic.
 
@@ -86,8 +86,8 @@ The agent presents this disclosure to merchants. Merchants see a verified identi
 
 ```
 1. Agent calls payclaw_getAgentIdentity({ merchantUrl: 'https://store.com' })
-2. PayClaw fetches store.com/.well-known/ucp manifest
-3. If merchant declares io.payclaw.common.identity → returns checkoutPatch
+2. kyaLabs fetches store.com/.well-known/ucp manifest
+3. If merchant declares io.kyalabs.common.identity → returns checkoutPatch
 4. Agent merges checkoutPatch into checkout payload
 5. Agent calls payclaw_reportBadgePresented({ merchantUrl, verification_token })
 6. Merchant verifies token locally (see UCP extension spec for verification)
@@ -97,11 +97,11 @@ If the merchant doesn't support UCP, a valid token is still returned — nothing
 
 ### Extended Auth (optional)
 
-When enabled, PayClaw checks back with your agent 7 seconds after badge presentation to confirm whether the merchant accepted or denied. Results are logged to your dashboard.
+When enabled, kyaLabs checks back with your agent 7 seconds after badge presentation to confirm whether the merchant accepted or denied. Results are logged to your dashboard.
 
 ```json
 "env": {
-  "PAYCLAW_API_URL": "https://payclaw.io",
+  "PAYCLAW_API_URL": "https://kyalabs.io",
   "PAYCLAW_EXTENDED_AUTH": "true"
 }
 ```
@@ -121,8 +121,8 @@ Without it, your agent reports outcomes via `payclaw_reportBadgeOutcome` when it
 
 | Capability | Description |
 |---|---|
-| Verify migration | Merchant-side JWT verification has moved to the [UCP extension spec](https://github.com/payclaw/ucp-agent-badge/tree/main/reference) as a reference implementation. It is no longer exported from this package. |
-| UCP-aware `getAgentIdentity` | Pass `merchantUrl` — fetches merchant manifest, returns `checkoutPatch` when `io.payclaw.common.identity` is declared |
+| Verify migration | Merchant-side JWT verification has moved to the [UCP extension spec](https://github.com/kyalabs/ucp-agent-badge/tree/main/reference) as a reference implementation. It is no longer exported from this package. |
+| UCP-aware `getAgentIdentity` | Pass `merchantUrl` — fetches merchant manifest, returns `checkoutPatch` when `io.kyalabs.common.identity` is declared |
 | `reportBadgePresented` with `merchantUrl` | Preferred over `merchant`; includes optional `checkoutSessionId` for UCP session tracking |
 | SSRF-protected manifest fetcher | HTTPS-only, private IP blocking, 5-minute domain cache |
 | Trip lifecycle hardening | `onServerClose` resolves as `inconclusive`; orphan token recovery on restart |
@@ -139,22 +139,22 @@ npx -y @payclaw/mcp-server
 
 ## KYA — Know Your Agent
 
-PayClaw is KYA infrastructure. Every declaration creates a verified record of agentic commerce behavior — building the trust signal that merchants need to tell authorized agents from anonymous bots.
+kyaLabs is KYA infrastructure. Every declaration creates a verified record of agentic commerce behavior — building the trust signal that merchants need to tell authorized agents from anonymous bots.
 
-- [Trust & Verification](https://payclaw.io/trust) — The full trust architecture
-- [For Merchants](https://payclaw.io/merchants) — How merchant UCP integration works
-- [UCP Extension Spec](https://github.com/payclaw/ucp-agent-badge) — `io.payclaw.common.identity` (MIT)
+- [Trust & Verification](https://kyalabs.io/trust) — The full trust architecture
+- [For Merchants](https://kyalabs.io/merchants) — How merchant UCP integration works
+- [UCP Extension Spec](https://github.com/kyalabs/ucp-agent-badge) — `io.kyalabs.common.identity` (MIT)
 
 ## Links
 
-- **Website:** [payclaw.io](https://payclaw.io)
+- **Website:** [kyalabs.io](https://kyalabs.io)
 - **npm:** [@payclaw/badge](https://www.npmjs.com/package/@payclaw/badge)
-- **UCP Extension:** [github.com/payclaw/ucp-agent-badge](https://github.com/payclaw/ucp-agent-badge)
+- **UCP Extension:** [github.com/kyalabs/ucp-agent-badge](https://github.com/kyalabs/ucp-agent-badge)
 - **ClawHub:** [payclaw-badge](https://clawhub.com/skills/payclaw-badge)
-- **Trust:** [payclaw.io/trust](https://payclaw.io/trust)
-- **Merchants:** [payclaw.io/merchants](https://payclaw.io/merchants)
-- **Contact:** agent_identity@payclaw.io
+- **Trust:** [kyalabs.io/trust](https://kyalabs.io/trust)
+- **Merchants:** [kyalabs.io/merchants](https://kyalabs.io/merchants)
+- **Contact:** agent_identity@kyalabs.io
 
 ---
 
-*Agents are not bots. PayClaw proves it.*
+*Agents are not bots. kyaLabs proves it.*

@@ -2,30 +2,23 @@
 import type { AgentIdentityResponse } from "../types.js";
 import { getStoredConsentKey } from "../lib/storage.js";
 
-class PayClawApiError extends Error {
+class BadgeApiError extends Error {
   constructor(
     message: string,
     public statusCode?: number
   ) {
     super(message);
-    this.name = "PayClawApiError";
+    this.name = "BadgeApiError";
   }
 }
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
 function getConfig() {
-  const baseUrl = process.env.PAYCLAW_API_URL;
+  const baseUrl = getBaseUrl();
   const apiKey = getStoredConsentKey();
-  if (!baseUrl) throw new PayClawApiError("PayClaw API URL is not configured.");
-  if (!apiKey) throw new PayClawApiError("PayClaw API key is not configured.");
-  if (
-    !baseUrl.startsWith("https://") &&
-    !baseUrl.startsWith("http://localhost")
-  ) {
-    throw new PayClawApiError("PayClaw API URL must use HTTPS.");
-  }
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
+  if (!apiKey) throw new BadgeApiError("kyaLabs API key is not configured.");
+  return { baseUrl, apiKey };
 }
 
 function authHeaders(apiKey: string): Record<string, string> {
@@ -45,9 +38,9 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
   } catch (err) {
     clearTimeout(timeout);
     if (err instanceof Error && err.name === "AbortError") {
-      throw new PayClawApiError("Request timed out.");
+      throw new BadgeApiError("Request timed out.");
     }
-    throw new PayClawApiError("Could not reach the PayClaw API.");
+    throw new BadgeApiError("Could not reach the kyaLabs API.");
   } finally {
     clearTimeout(timeout);
   }
@@ -58,7 +51,7 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
         ? init.headers.get("Authorization")
         : (init.headers as Record<string, string> | undefined)?.Authorization;
     const isBearer = typeof authHeader === "string" && authHeader.startsWith("Bearer ");
-    throw new PayClawApiError(
+    throw new BadgeApiError(
       isBearer
         ? "Authentication failed. Check your access token or OAuth credentials."
         : "Authentication failed. Check your API key.",
@@ -74,7 +67,7 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
     } catch {
       body = await res.text();
     }
-    throw new PayClawApiError(body, res.status);
+    throw new BadgeApiError(body, res.status);
   }
 
   return (await res.json()) as T;
@@ -99,7 +92,7 @@ export function isApiMode(): boolean {
   return !!process.env.PAYCLAW_API_URL || !!getStoredConsentKey();
 }
 
-/** Base URL for API calls. Defaults to https://payclaw.io. Validates HTTPS for token safety. */
+/** Base URL for API calls. Defaults to https://kyalabs.io. Validates HTTPS for token safety. */
 export function getBaseUrl(): string {
   const url = process.env.PAYCLAW_API_URL;
   if (url && url.trim().length > 0) {
@@ -108,7 +101,7 @@ export function getBaseUrl(): string {
       return trimmed;
     }
   }
-  return "https://payclaw.io";
+  return "https://www.kyalabs.io";
 }
 
 /**

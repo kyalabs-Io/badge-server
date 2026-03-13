@@ -2,20 +2,20 @@
 import * as api from "../api/client.js";
 import { getStoredConsentKey } from "../lib/storage.js";
 import { initiateDeviceAuth, pollForApproval } from "../lib/device-auth.js";
-import { fetchUCPManifest, findPayClawCapability, isVersionCompatible } from "../lib/ucp-manifest.js";
+import { fetchUCPManifest, findBadgeCapability, isVersionCompatible } from "../lib/ucp-manifest.js";
 
 const MOCK_TOKEN_PREFIX = "pc_v1_sand";
-/** Must match the kid in the JWKS published at payclaw.io/.well-known/ucp (BUILD 3 / PRD-1) */
-const PAYCLAW_KID = "payclaw-badge-v1";
+/** Must match the kid in the JWKS published at kyalabs.io/.well-known/ucp (BUILD 3 / PRD-1) */
+const BADGE_KID = "kyalabs-badge-v1";
 
 function getMockDisclosure(scope = "BROWSE"): string {
-  return `This agent is using PayClaw Badge: Agent Intent for Ecommerce. The principal user token is a SHA-256 starting ${MOCK_TOKEN_PREFIX}***. Intent has been expressly user-authorized for this session for [${scope}]. For inquiries, please message agent_identity@payclaw.io`;
+  return `This agent is using Badge by kyaLabs: Agent Intent for Ecommerce. The principal user token is a SHA-256 starting ${MOCK_TOKEN_PREFIX}***. Intent has been expressly user-authorized for this session for [${scope}]. For inquiries, please message agent_identity@kyalabs.io`;
 }
 
 /** Build disclosure from OAuth token prefix (matches app disclosure format). */
 function getDisclosureFromToken(token: string, scope = "BROWSE"): string {
   const prefix = token.slice(0, 11);
-  return `This agent is using PayClaw Badge: Agent Intent for Ecommerce. The principal user token is a SHA-256 starting ${prefix}***. Intent has been expressly user-authorized for this session for [${scope}]. For inquiries, please message agent_identity@payclaw.io`;
+  return `This agent is using Badge by kyaLabs: Agent Intent for Ecommerce. The principal user token is a SHA-256 starting ${prefix}***. Intent has been expressly user-authorized for this session for [${scope}]. For inquiries, please message agent_identity@kyalabs.io`;
 }
 
 /** Build identity result from OAuth token (when API doesn't accept OAuth Bearer yet). */
@@ -26,16 +26,16 @@ function identityFromOAuthToken(
   assumeVerified = true
 ): IdentityResult {
   return {
-    product_name: "PayClaw Badge",
+    product_name: "Badge by kyaLabs",
     status: assumeVerified ? "active" : "pending",
     agent_disclosure: getDisclosureFromToken(token),
     verification_token: token,
-    trust_url: "https://payclaw.io/trust",
-    contact: "agent_identity@payclaw.io",
+    trust_url: "https://kyalabs.io/trust",
+    contact: "agent_identity@kyalabs.io",
     principal_verified: assumeVerified,
     mfa_confirmed: false,
     spend_available: false,
-    spend_cta: "For agent payments, use @payclaw/mcp-server — payclaw.io/docs",
+    spend_cta: "For agent payments, use @payclaw/mcp-server — kyalabs.io/docs",
     merchant,
   };
 }
@@ -56,9 +56,9 @@ export interface IdentityResult {
   message?: string;
   /** Internal: activation flow — agent should display this to user */
   activation_required?: boolean;
-  /** UCP: merchant supports io.payclaw.common.identity */
+  /** UCP: merchant supports io.kyalabs.common.identity */
   ucpCapable?: boolean;
-  /** UCP: merchant requires PayClaw credential */
+  /** UCP: merchant requires Badge credential */
   requiredByMerchant?: boolean;
   /** UCP: checkout patch to merge into checkout payload */
   checkoutPatch?: Record<string, unknown>;
@@ -69,7 +69,7 @@ export interface IdentityResult {
 let pendingActivation: Promise<IdentityResult> | null = null;
 
 /**
- * Get agent identity token — Badge by PayClaw.
+ * Get agent identity token — Badge by kyaLabs.
  * When no consent key exists: initiates device flow, returns activation instructions,
  * polls in background. On approval, stores key. Next call uses stored key.
  */
@@ -116,7 +116,7 @@ async function enrichWithUCP(result: IdentityResult, merchantUrl: string): Promi
     return { ...result, ucpCapable: false };
   }
 
-  const capability = findPayClawCapability(manifest);
+  const capability = findBadgeCapability(manifest);
   if (!capability) {
     return { ...result, ucpCapable: false };
   }
@@ -130,9 +130,9 @@ async function enrichWithUCP(result: IdentityResult, merchantUrl: string): Promi
   }
 
   const checkoutPatch = {
-    "io.payclaw.common.identity": {
+    [capability.extensionName]: {
       token: result.verification_token!,
-      kid: PAYCLAW_KID,
+      kid: BADGE_KID,
     },
   };
 
@@ -148,30 +148,30 @@ async function enrichWithUCP(result: IdentityResult, merchantUrl: string): Promi
 async function callWithKey(apiKey: string, merchant?: string): Promise<IdentityResult> {
   if (!api.isApiMode()) {
     return {
-      product_name: "PayClaw Badge",
+      product_name: "Badge by kyaLabs",
       status: "active",
       agent_disclosure: getMockDisclosure(),
       verification_token: `${MOCK_TOKEN_PREFIX}********************`,
-      trust_url: "https://payclaw.io/trust",
-      contact: "agent_identity@payclaw.io",
+      trust_url: "https://kyalabs.io/trust",
+      contact: "agent_identity@kyalabs.io",
       principal_verified: true,
       merchant: merchant || undefined,
       instructions:
-        "You're running in mock mode — no API connected. Generate your real agent disclosure at payclaw.io/dashboard/badge to get a live verification token.",
+        "You're running in mock mode — no API connected. Generate your real agent disclosure at kyalabs.io/dashboard/badge to get a live verification token.",
     };
   }
 
   try {
     const result = await api.getAgentIdentity(undefined, merchant);
     return {
-      product_name: "PayClaw Badge",
+      product_name: "Badge by kyaLabs",
       status: "active",
       merchant: merchant || undefined,
       ...result,
     };
   } catch (err) {
     return {
-      product_name: "PayClaw Badge",
+      product_name: "Badge by kyaLabs",
       status: "error",
       message: err instanceof Error ? err.message : String(err),
     };
@@ -190,7 +190,7 @@ async function callWithOAuthToken(token: string, merchant?: string): Promise<Ide
       merchant
     );
     return {
-      product_name: "PayClaw Badge",
+      product_name: "Badge by kyaLabs",
       status: "active",
       merchant: merchant || undefined,
       ...result,
@@ -205,9 +205,9 @@ async function startActivationFlow(merchant?: string): Promise<IdentityResult> {
   try {
     const deviceAuth = await initiateDeviceAuth();
     const message = [
-      "[PayClaw MCP Server initializing...]",
+      "[Badge MCP Server initializing...]",
       "",
-      "🛡️  Merchants block anonymous bots. PayClaw proves your agent is authorized.",
+      "🛡️  Merchants block anonymous bots. kyaLabs proves your agent is authorized.",
       "🔗  To issue your agent's Consent Key, we need your approval.",
       "",
       `👉  Go to: ${deviceAuth.verification_uri}`,
@@ -241,7 +241,7 @@ async function startActivationFlow(merchant?: string): Promise<IdentityResult> {
     });
 
     return {
-      product_name: "PayClaw Badge",
+      product_name: "Badge by kyaLabs",
       status: "activation_required",
       activation_required: true,
       message,
@@ -249,7 +249,7 @@ async function startActivationFlow(merchant?: string): Promise<IdentityResult> {
     };
   } catch (err) {
     return {
-      product_name: "PayClaw Badge",
+      product_name: "Badge by kyaLabs",
       status: "error",
       message: err instanceof Error ? err.message : String(err),
     };
@@ -282,7 +282,7 @@ export function formatIdentityResponse(r: IdentityResult): string {
 
   lines.push(
     `  Status:      ACTIVE`,
-    `  Trust:       ${r.trust_url || "https://payclaw.io/trust"}`,
+    `  Trust:       ${r.trust_url || "https://kyalabs.io/trust"}`,
     ``,
     `  Disclosure (present to merchants):`,
     `  "${r.agent_disclosure}"`
@@ -309,7 +309,7 @@ export function formatIdentityResponse(r: IdentityResult): string {
   } else if (r.spend_cta) {
     lines.push(``, `  ℹ️  ${r.spend_cta}`);
   } else {
-    lines.push(``, `  ℹ️  Identity only. For agent payments, use @payclaw/mcp-server — payclaw.io/docs`);
+    lines.push(``, `  ℹ️  Identity only. For agent payments, use @payclaw/mcp-server — kyalabs.io/docs`);
   }
 
   return lines.join("\n");

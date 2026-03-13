@@ -5,7 +5,7 @@
 ### Removed
 - `verify()` export — moved to [ucp-agent-badge/reference/](https://github.com/payclaw/ucp-agent-badge/tree/main/reference) as a reference implementation
 - `./verify` sub-path export from package.json
-- `verify.ts` and `verify.test.ts` (now at github.com/payclaw/ucp-agent-badge/reference/)
+- `verify.ts` and `verify.test.ts` (now at [ucp-agent-badge/reference/](https://github.com/payclaw/ucp-agent-badge/tree/main/reference))
 
 ### Changed
 - README: agent-developer only; merchant verification content moved to ucp-agent-badge
@@ -21,7 +21,7 @@
 - Zero runtime dependencies
 
 ### Added (PRD-3)
-- `merchantUrl` parameter on `getAgentIdentity` — fetches merchant's `/.well-known/ucp` manifest and checks for `io.payclaw.common.identity` capability
+- `merchantUrl` parameter on `getAgentIdentity` — fetches merchant's `/.well-known/ucp` manifest and checks for `io.kyalabs.common.identity` capability
 - `checkoutPatch` in identity response — agent merges into checkout payload when merchant supports UCP
 - `ucpCapable`, `requiredByMerchant`, `ucpWarning` fields on identity result
 - `merchantUrl` parameter on `reportBadgePresented` (preferred over `merchant`)
@@ -88,7 +88,7 @@
 ## [0.7.2] - 2026-03-06
 
 ### Fixed
-- **F1**: README Quick Start config pointed to `api.payclaw.io` (does not exist); corrected to `payclaw.io`
+- **F1**: README Quick Start config pointed to `api.payclaw.io` (does not exist); corrected to `kyalabs.io`
 - **F2**: `server.json` marked `PAYCLAW_API_KEY` as required, blocking device-flow onboarding; changed to optional
 - **F2**: Added missing `PAYCLAW_EXTENDED_AUTH` env var to `server.json`
 - **F2**: Aligned `PAYCLAW_API_KEY` description with mcp-server (mentions device flow)

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   fetchUCPManifest,
-  findPayClawCapability,
+  findBadgeCapability,
   isVersionCompatible,
   _resetManifestCache,
 } from "./ucp-manifest.js";
@@ -17,11 +17,11 @@ describe("ucp-manifest", () => {
 
   const VALID_MANIFEST = {
     capabilities: {
-      "io.payclaw.common.identity": [
+      "io.kyalabs.common.identity": [
         {
           version: "2026-01-11",
-          spec: "https://payclaw.io/ucp/spec/identity",
-          schema: "https://payclaw.io/ucp/schemas/identity.json",
+          spec: "https://kyalabs.io/ucp/spec/identity",
+          schema: "https://kyalabs.io/ucp/schemas/identity.json",
           config: { required: false },
         },
       ],
@@ -84,32 +84,55 @@ describe("ucp-manifest", () => {
     });
   });
 
-  describe("findPayClawCapability", () => {
+  describe("findBadgeCapability", () => {
     it("finds capability in array-wrapped format", () => {
-      const result = findPayClawCapability(VALID_MANIFEST);
-      expect(result).toEqual({ version: "2026-01-11", required: false });
+      const result = findBadgeCapability(VALID_MANIFEST);
+      expect(result).toEqual({ version: "2026-01-11", required: false, extensionName: "io.kyalabs.common.identity" });
     });
 
     it("finds capability in plain object format", () => {
       const manifest = {
         capabilities: {
-          "io.payclaw.common.identity": {
+          "io.kyalabs.common.identity": {
             version: "2026-01-11",
             config: { required: true },
           },
         },
       };
-      const result = findPayClawCapability(manifest);
-      expect(result).toEqual({ version: "2026-01-11", required: true });
+      const result = findBadgeCapability(manifest);
+      expect(result).toEqual({ version: "2026-01-11", required: true, extensionName: "io.kyalabs.common.identity" });
+    });
+
+    it("finds legacy io.payclaw namespace", () => {
+      const manifest = {
+        capabilities: {
+          "io.payclaw.common.identity": [
+            { version: "2026-01-11", config: { required: false } },
+          ],
+        },
+      };
+      const result = findBadgeCapability(manifest);
+      expect(result).toEqual({ version: "2026-01-11", required: false, extensionName: "io.payclaw.common.identity" });
+    });
+
+    it("prefers current namespace over legacy", () => {
+      const manifest = {
+        capabilities: {
+          "io.kyalabs.common.identity": [{ version: "2026-01-11" }],
+          "io.payclaw.common.identity": [{ version: "2026-01-11" }],
+        },
+      };
+      const result = findBadgeCapability(manifest);
+      expect(result?.extensionName).toBe("io.kyalabs.common.identity");
     });
 
     it("returns null when extension not present", () => {
-      const result = findPayClawCapability({ capabilities: {} });
+      const result = findBadgeCapability({ capabilities: {} });
       expect(result).toBeNull();
     });
 
     it("returns null when no capabilities", () => {
-      const result = findPayClawCapability({});
+      const result = findBadgeCapability({});
       expect(result).toBeNull();
     });
   });

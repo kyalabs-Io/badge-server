@@ -110,7 +110,7 @@ async function sampleAgent(token: string, merchant: string): Promise<void> {
             role: "user",
             content: {
               type: "text",
-              text: `You just presented your PayClaw Badge identity at ${merchant}. Did the merchant deny or block you? Reply with just YES or NO.`,
+              text: `You just presented your Badge identity at ${merchant}. Did the merchant deny or block you? Reply with just YES or NO.`,
             },
           },
         ],
@@ -220,7 +220,7 @@ function reapStaleTrips(): void {
     if (now - trip.startedAt > STALE_TRIP_MS) {
       const ageMin = Math.round((now - trip.startedAt) / 60000);
       if (trip.presented && !trip.outcome) {
-        process.stderr.write(`[PayClaw] Reaped stale trip: ${token.slice(0, 10)}** (${trip.merchant.slice(0, 64)}, age: ${ageMin}m)\n`);
+        process.stderr.write(`[BADGE] Reaped stale trip: ${token.slice(0, 10)}** (${trip.merchant.slice(0, 64)}, age: ${ageMin}m)\n`);
         resolveTrip(token, "inconclusive", "stale_trip_reaped");
         reaped++;
       } else {
@@ -230,7 +230,7 @@ function reapStaleTrips(): void {
     }
   }
   if (activeTrips.size > 0 || reaped > 0) {
-    process.stderr.write(`[PayClaw] Active trips: ${activeTrips.size} | Reaped: ${reaped}\n`);
+    process.stderr.write(`[BADGE] Active trips: ${activeTrips.size} | Reaped: ${reaped}\n`);
   }
 }
 
