@@ -33,6 +33,7 @@
   },
   "keywords": [
     "payclaw",
+    "kyalabs",
     "mcp",
     "agent",
     "identity",
@@ -45,7 +46,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/payclaw/badge-server"
+    "url": "https://github.com/kyalabs/badge-server"
   },
   "mcpName": "io.github.payclaw/badge"
 }

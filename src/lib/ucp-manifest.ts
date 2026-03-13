@@ -1,11 +1,11 @@
 /**
- * UCP manifest fetcher — checks if a merchant supports io.payclaw.common.identity.
+ * UCP manifest fetcher — checks if a merchant supports io.kyalabs.common.identity.
  *
  * Fetches {merchantUrl}/.well-known/ucp, caches per domain for 5 minutes.
  * Never throws — returns null on any error.
  */
 
-const EXTENSION_NAME = "io.payclaw.common.identity";
+const EXTENSION_NAME = "io.kyalabs.common.identity";
 const FETCH_TIMEOUT_MS = 3000;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -107,12 +107,12 @@ export async function fetchUCPManifest(merchantUrl: string): Promise<UCPManifest
   }
 }
 
-export interface PayClawCapability {
+export interface BadgeCapability {
   version: string;
   required: boolean;
 }
 
-export function findPayClawCapability(manifest: UCPManifest): PayClawCapability | null {
+export function findBadgeCapability(manifest: UCPManifest): BadgeCapability | null {
   const caps = manifest.capabilities;
   if (!caps || !(EXTENSION_NAME in caps)) return null;
 

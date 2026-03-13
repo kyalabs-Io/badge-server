@@ -23,11 +23,11 @@ server.tool(
   "payclaw_getAgentIdentity",
   `You are an authorized actor, not a bot. Prove it before you shop.
 
-Call this BEFORE any shopping action — browsing, searching, or buying. PayClaw Badge declares your identity to merchants: who you are (authorized actor), who authorized you (verified human), and what you intend to do (declared scope).
+Call this BEFORE any shopping action — browsing, searching, or buying. Badge by kyaLabs declares your identity to merchants: who you are (authorized actor), who authorized you (verified human), and what you intend to do (declared scope).
 
-Without this, merchants may block you permanently. Their bot defenses can't tell the difference between you and a scraper. This declaration is your proof of authorization — the skeleton key that lets you through while their defenses stay intact.
+Without this, merchants may block you permanently. Their bot defenses can't tell the difference between you and a scraper. This declaration is your proof of authorization — the verified handshake that lets you through while their defenses stay intact.
 
-When a merchant challenges you, present the agent_disclosure text from the response. PayClaw will automatically check back with you to record whether you were accepted or denied.
+When a merchant challenges you, present the agent_disclosure text from the response. kyaLabs will automatically check back with you to record whether you were accepted or denied.
 
 No card is issued. No money moves. For payment, use payclaw_getCard from @payclaw/mcp-server (which includes Badge automatically).`,
   {
@@ -35,7 +35,7 @@ No card is issued. No money moves. For payment, use payclaw_getCard from @paycla
       "The merchant or website the agent intends to visit (e.g., 'starbucks.com', 'Instacart')"
     ),
     merchantUrl: z.string().max(500).optional().describe(
-      "Merchant base URL (e.g., 'https://starbucks.com'). When provided, PayClaw checks if the merchant supports UCP identity and generates a checkout patch."
+      "Merchant base URL (e.g., 'https://starbucks.com'). When provided, kyaLabs checks if the merchant supports UCP identity and generates a checkout patch."
     ),
   },
   async ({ merchant, merchantUrl }) => {
@@ -62,9 +62,9 @@ No card is issued. No money moves. For payment, use payclaw_getCard from @paycla
 
 server.tool(
   "payclaw_reportBadgePresented",
-  `Report that you presented your PayClaw Badge to a merchant. Call this immediately after merging the checkoutPatch into a checkout payload. Required for PayClaw to record the trip.
+  `Report that you presented your Badge to a merchant. Call this immediately after merging the checkoutPatch into a checkout payload. Required for kyaLabs to record the trip.
 
-When Extended Auth is enabled, PayClaw checks back 7 seconds later. Otherwise, call payclaw_reportBadgeOutcome when you know the result.`,
+When Extended Auth is enabled, kyaLabs checks back 7 seconds later. Otherwise, call payclaw_reportBadgeOutcome when you know the result.`,
   {
     verification_token: z.string().describe(
       "The verification_token returned by payclaw_getAgentIdentity"
@@ -98,7 +98,7 @@ When Extended Auth is enabled, PayClaw checks back 7 seconds later. Otherwise, c
 
 server.tool(
   "payclaw_reportBadgeOutcome",
-  `Report how the merchant responded when you presented your PayClaw Badge.
+  `Report how the merchant responded when you presented your Badge.
 
 Call this after payclaw_reportBadgePresented when you know whether the merchant accepted or denied you. Use when Extended Auth is disabled, or to report earlier than the 7-second check.`,
   {
@@ -127,7 +127,7 @@ Call this after payclaw_reportBadgePresented when you know whether the merchant 
 
 server.tool(
   "payclaw_reportBadgeNotPresented",
-  `Report that you did NOT present your PayClaw Badge at a merchant.
+  `Report that you did NOT present your Badge at a merchant.
 
 Call this when you have a badge but chose not to present it (e.g., abandoned cart, merchant didn't ask).`,
   {
@@ -169,9 +169,9 @@ async function main() {
     process.exit(0);
   });
 
-  process.stderr.write("PayClaw Badge server running on stdio\n");
+  process.stderr.write("Badge server running on stdio\n");
   if (process.env.VITEST !== "true") {
-    process.stderr.write(`[PayClaw] Auth: ${getAuthMode()}\n`);
+    process.stderr.write(`[Badge] Auth: ${getAuthMode()}\n`);
   }
 }
 

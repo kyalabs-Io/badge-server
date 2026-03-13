@@ -22,7 +22,7 @@ vi.mock("./lib/storage.js", () => ({
 }));
 
 vi.mock("./api/client.js", () => ({
-  getBaseUrl: vi.fn().mockReturnValue("https://payclaw.io"),
+  getBaseUrl: vi.fn().mockReturnValue("https://kyalabs.io"),
 }));
 
 describe("sampling — multi-merchant trip lifecycle", () => {

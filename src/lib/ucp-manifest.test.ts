@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   fetchUCPManifest,
-  findPayClawCapability,
+  findBadgeCapability,
   isVersionCompatible,
   _resetManifestCache,
 } from "./ucp-manifest.js";
@@ -17,11 +17,11 @@ describe("ucp-manifest", () => {
 
   const VALID_MANIFEST = {
     capabilities: {
-      "io.payclaw.common.identity": [
+      "io.kyalabs.common.identity": [
         {
           version: "2026-01-11",
-          spec: "https://payclaw.io/ucp/spec/identity",
-          schema: "https://payclaw.io/ucp/schemas/identity.json",
+          spec: "https://kyalabs.io/ucp/spec/identity",
+          schema: "https://kyalabs.io/ucp/schemas/identity.json",
           config: { required: false },
         },
       ],
@@ -84,32 +84,32 @@ describe("ucp-manifest", () => {
     });
   });
 
-  describe("findPayClawCapability", () => {
+  describe("findBadgeCapability", () => {
     it("finds capability in array-wrapped format", () => {
-      const result = findPayClawCapability(VALID_MANIFEST);
+      const result = findBadgeCapability(VALID_MANIFEST);
       expect(result).toEqual({ version: "2026-01-11", required: false });
     });
 
     it("finds capability in plain object format", () => {
       const manifest = {
         capabilities: {
-          "io.payclaw.common.identity": {
+          "io.kyalabs.common.identity": {
             version: "2026-01-11",
             config: { required: true },
           },
         },
       };
-      const result = findPayClawCapability(manifest);
+      const result = findBadgeCapability(manifest);
       expect(result).toEqual({ version: "2026-01-11", required: true });
     });
 
     it("returns null when extension not present", () => {
-      const result = findPayClawCapability({ capabilities: {} });
+      const result = findBadgeCapability({ capabilities: {} });
       expect(result).toBeNull();
     });
 
     it("returns null when no capabilities", () => {
-      const result = findPayClawCapability({});
+      const result = findBadgeCapability({});
       expect(result).toBeNull();
     });
   });
