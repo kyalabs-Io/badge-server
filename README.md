@@ -17,7 +17,7 @@ One MCP tool call. Your agent declares itself. Merchants let it through.
 Add to your MCP client config:
 
 ```bash
-npx -y @kyalabs/badge
+npx @kyalabs/badge
 ```
 
 OR
@@ -27,7 +27,7 @@ OR
   "mcpServers": {
     "kyalabs-badge": {
       "command": "npx",
-      "args": ["-y", "@kyalabs/badge"]
+      "args": ["@kyalabs/badge"]
     }
   }
 }
@@ -146,7 +146,7 @@ When enabled, kyaLabs checks back with your agent 7 seconds after each badge pre
 Badge is the base layer. For virtual Visa cards, use [@kyalabs/mcp-server](https://www.npmjs.com/package/@kyalabs/mcp-server) — which includes Badge automatically.
 
 ```bash
-npx -y @kyalabs/mcp-server
+npx @kyalabs/mcp-server
 ```
 
 ## KYA — Know Your Agent
