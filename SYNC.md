@@ -14,6 +14,7 @@
 | `src/lib/report-badge.ts` | Badge reporting |
 | `src/lib/parse-outcome.ts` | Outcome parsing |
 | `src/lib/report-badge-presented-handler.ts` | Badge presentation handler |
+| `src/lib/signal-status.ts` | v2.3: SignalStatus + fetchSignalStatus (3s timeout, graceful null) |
 
 ### mcp-server owns (copy TO badge-server)
 
@@ -40,7 +41,12 @@ Shared files carry a header comment:
 
 ## Version
 
-Last sync: **2.0.0** (Badge Redux v2.0, Mar 16)
+Last sync: **2.3.0** (v2.2 assurance_level + v2.3 signal awareness, 2026-03-17)
+
+### v2.3.0 Changes
+- `sampling.ts`: Added `assuranceLevelStore`, `registerTripAssuranceLevel()`, `assuranceLevel` field in `ActiveTrip`, `assurance_level` in both report payloads, `assuranceLevelStore.clear()` in `resetSamplingState`
+- `signal-status.ts` (NEW): Canonical in badge-server — `SignalStatus` interface + `fetchSignalStatus()` (3s timeout, graceful null). Synced copy in mcp-server.
+- `getAgentIdentity.ts`: **Not synced** — divergent in both repos. v2.2: added `introspectBadgeToken` call + `registerTripAssuranceLevel`. v2.3: added `fetchSignalStatus` + `fireSignalContextReceived` + `extractDomain`.
 
 ### v2.0.0 Changes
 - `storage.ts`: Added `getOrCreateInstallId()`, `_resetInstallIdCache()`

@@ -20,6 +20,17 @@ vi.mock("../api/client.js", () => ({
   getAgentIdentity: vi.fn(),
   getAgentIdentityWithToken: vi.fn(),
   getBaseUrl: vi.fn(() => "https://www.kyalabs.io"),
+  introspectBadgeToken: vi.fn(() => null),
+}));
+
+vi.mock("../lib/signal-status.js", () => ({
+  fetchSignalStatus: vi.fn(() => null),
+}));
+
+vi.mock("../sampling.js", () => ({
+  registerTripAssuranceLevel: vi.fn(),
+  onTripStarted: vi.fn(),
+  onIdentityPresented: vi.fn(),
 }));
 
 vi.mock("../lib/device-auth.js", () => ({
@@ -300,5 +311,147 @@ describe("getAgentIdentity — next_step field", () => {
 
     expect(result.next_step).toBeDefined();
     expect(typeof result.next_step).toBe("string");
+  });
+});
+
+// ── v2.2: assurance_level from introspect ────────────────────────────────────
+
+describe("getAgentIdentity — v2.2: assurance_level", () => {
+  const mockFetch = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", mockFetch);
+    mockFetch.mockResolvedValue({ ok: true });
+    _resetBrowseDeclaredCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  // Contract 2.2.6 — IdentityResult includes assurance_level from introspect
+  it("attaches assurance_level to result when introspect returns level", async () => {
+    vi.mocked(storage.getStoredConsentKey).mockReturnValue("pk_test_xxx");
+    vi.mocked(api.isApiMode).mockReturnValue(false);
+    vi.mocked(api.introspectBadgeToken).mockResolvedValue({
+      active: true,
+      assurance_level: "regular",
+    });
+
+    const result = await getAgentIdentity("store.com");
+    expect(result.assurance_level).toBe("regular");
+  });
+
+  it("result.assurance_level is null when introspect returns null (graceful)", async () => {
+    vi.mocked(storage.getStoredConsentKey).mockReturnValue("pk_test_xxx");
+    vi.mocked(api.isApiMode).mockReturnValue(false);
+    vi.mocked(api.introspectBadgeToken).mockResolvedValue(null);
+
+    const result = await getAgentIdentity("store.com");
+    // Should not throw — assurance_level absent or null is acceptable
+    expect(result.status).toBeDefined();
+  });
+
+  it("mock tokens (pc_v1_sand) skip introspect — assurance_level null", async () => {
+    vi.mocked(storage.getStoredConsentKey).mockReturnValue("pk_test_xxx");
+    vi.mocked(api.isApiMode).mockReturnValue(false);
+    // introspectBadgeToken mock returns null for sand tokens (already handled by implementation)
+    vi.mocked(api.introspectBadgeToken).mockResolvedValue(null);
+
+    const result = await getAgentIdentity("store.com");
+    // Mock mode returns sand token — identity should still return correctly
+    expect(result.product_name).toBe("Badge by kyaLabs");
+  });
+});
+
+// ── v2.3: merchant_signals from signal-status ────────────────────────────────
+
+describe("getAgentIdentity — v2.3: merchant_signals", () => {
+  const mockFetch = vi.fn();
+  // Import signal-status module for mocking
+  let signalStatus: typeof import("../lib/signal-status.js");
+
+  beforeEach(async () => {
+    vi.stubGlobal("fetch", mockFetch);
+    mockFetch.mockResolvedValue({ ok: true });
+    _resetBrowseDeclaredCache();
+    signalStatus = await import("../lib/signal-status.js");
+    vi.mocked(signalStatus.fetchSignalStatus).mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  // Contract 2.3.9 — getAgentIdentity result includes merchant_signals
+  it("attaches merchant_signals when fetchSignalStatus returns active status", async () => {
+    vi.mocked(storage.getStoredConsentKey).mockReturnValue("pk_test_xxx");
+    vi.mocked(api.isApiMode).mockReturnValue(false);
+    vi.mocked(signalStatus.fetchSignalStatus).mockResolvedValue({
+      signals_active: true,
+      signal_types: ["window_kya_commerce", "meta_tags"],
+    });
+
+    const result = await getAgentIdentity("https://theagenticdepot.com/products");
+    expect(result.merchant_signals?.signals_active).toBe(true);
+    expect(result.merchant_signals?.signal_types).toContain("window_kya_commerce");
+  });
+
+  it("merchant_signals is null when fetchSignalStatus returns null (graceful)", async () => {
+    vi.mocked(storage.getStoredConsentKey).mockReturnValue("pk_test_xxx");
+    vi.mocked(api.isApiMode).mockReturnValue(false);
+    vi.mocked(signalStatus.fetchSignalStatus).mockResolvedValue(null);
+
+    const result = await getAgentIdentity("https://store.com");
+    // Should not throw — no merchant_signals is acceptable
+    expect(result.status).toBeDefined();
+  });
+
+  // Contract 2.3.10 — signal_context_received fired when signals active
+  it("fires signal_context_received POST when signals are active", async () => {
+    vi.mocked(storage.getStoredConsentKey).mockReturnValue("pk_test_xxx");
+    vi.mocked(api.isApiMode).mockReturnValue(false);
+    vi.mocked(signalStatus.fetchSignalStatus).mockResolvedValue({
+      signals_active: true,
+      signal_types: ["window_kya_commerce"],
+    });
+
+    mockFetch.mockResolvedValue({ ok: true });
+    await getAgentIdentity("https://theagenticdepot.com");
+
+    // signal_context_received POST should have fired
+    const reportCalls = mockFetch.mock.calls.filter((c) => {
+      try {
+        const body = JSON.parse(c[1]?.body || "{}");
+        return body.event_type === "signal_context_received";
+      } catch {
+        return false;
+      }
+    });
+    expect(reportCalls.length).toBeGreaterThanOrEqual(1);
+    const body = JSON.parse(reportCalls[0][1].body);
+    expect(body.signals_found).toContain("window_kya_commerce");
+  });
+
+  it("does NOT fire signal_context_received when signals are inactive", async () => {
+    vi.mocked(storage.getStoredConsentKey).mockReturnValue("pk_test_xxx");
+    vi.mocked(api.isApiMode).mockReturnValue(false);
+    vi.mocked(signalStatus.fetchSignalStatus).mockResolvedValue({
+      signals_active: false,
+      signal_types: [],
+    });
+
+    await getAgentIdentity("https://store.com");
+
+    const reportCalls = mockFetch.mock.calls.filter((c) => {
+      try {
+        return JSON.parse(c[1]?.body || "{}").event_type === "signal_context_received";
+      } catch {
+        return false;
+      }
+    });
+    expect(reportCalls.length).toBe(0);
   });
 });

@@ -1,4 +1,4 @@
-// Canonical: mcp-server | Synced: 2.1.0 | Do not edit in badge-server
+// Canonical: mcp-server | Synced: 2.3.0 | Do not edit in badge-server
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { parseResponse } from "./lib/parse-outcome.js";
 import { getStoredConsentKey, getOrCreateInstallId } from "./lib/storage.js";
@@ -21,10 +21,13 @@ export interface ActiveTrip {
   samplingTimer?: ReturnType<typeof setTimeout>;
   /** v2.1: Trip ID linking all events in a shopping session */
   tripId?: string;
+  /** v2.2: assurance level from introspect at identity time */
+  assuranceLevel?: string | null;
 }
 
 // In-memory state — max 100 active trips
 const activeTrips = new Map<string, ActiveTrip>();
+const assuranceLevelStore = new Map<string, string | null>();
 const MAX_TRIPS = 100;
 const REAPER_INTERVAL_MS = 60000;
 const STALE_TRIP_MS = 15 * 60 * 1000; // 15 minutes
@@ -73,6 +76,7 @@ export function onTripStarted(token: string, merchant: string, tripId?: string):
     startedAt: Date.now(),
     presented: false,
     tripId,
+    assuranceLevel: assuranceLevelStore.get(token),
   });
 }
 
@@ -174,8 +178,8 @@ function resolveTrip(token: string, outcome: string, detail: string): void {
   if (trip.samplingTimer) clearTimeout(trip.samplingTimer);
   trip.outcome = outcome;
 
-  // Report to API — include trip_id when available
-  reportOutcome(token, outcome, trip.merchant, detail, trip.tripId).catch((err) => {
+  // Report to API — include trip_id and assurance_level when available
+  reportOutcome(token, outcome, trip.merchant, detail, trip.tripId, trip.assuranceLevel).catch((err) => {
     process.stderr.write(
       `[BADGE] Failed to report outcome: ${err}\n`
     );
@@ -183,6 +187,7 @@ function resolveTrip(token: string, outcome: string, detail: string): void {
 
   // Evict from memory after reporting
   activeTrips.delete(token);
+  assuranceLevelStore.delete(token);
 }
 
 async function reportOutcome(
@@ -190,7 +195,8 @@ async function reportOutcome(
   outcome: string,
   merchant: string,
   detail: string,
-  tripId?: string
+  tripId?: string,
+  assuranceLevel?: string | null
 ): Promise<void> {
   const apiUrl = getEnvApiUrl() || DEFAULT_API_URL;
   const key = getStoredConsentKey();
@@ -214,6 +220,7 @@ async function reportOutcome(
           outcome,
           install_id: installId,
           ...(tripId && { trip_id: tripId }),
+          ...(assuranceLevel ? { assurance_level: assuranceLevel } : {}),
         }),
       });
       if (!res.ok) {
@@ -238,6 +245,7 @@ async function reportOutcome(
           agent_model: getAgentModel(),
           timestamp: Date.now(),
           ...(tripId && { trip_id: tripId }),
+          ...(assuranceLevel ? { assurance_level: assuranceLevel } : {}),
         }),
       });
       if (!res.ok) {
@@ -266,6 +274,7 @@ function reapStaleTrips(): void {
         reaped++;
       } else {
         activeTrips.delete(token);
+        assuranceLevelStore.delete(token);
         reaped++;
       }
     }
@@ -286,6 +295,21 @@ export function onServerClose(): void {
   activeTrips.clear();
 }
 
+/**
+ * v2.2: Store assurance level for a token before the trip starts.
+ * Called from getAgentIdentity after introspect. Patches an already-active trip
+ * if one exists; otherwise stored and picked up when onTripStarted fires.
+ */
+export function registerTripAssuranceLevel(token: string, assuranceLevel: string | null): void {
+  if (assuranceLevelStore.size >= MAX_TRIPS) {
+    const firstKey = assuranceLevelStore.keys().next().value;
+    if (firstKey !== undefined) assuranceLevelStore.delete(firstKey);
+  }
+  assuranceLevelStore.set(token, assuranceLevel ?? null);
+  const trip = activeTrips.get(token);
+  if (trip) trip.assuranceLevel = assuranceLevel;
+}
+
 /** Test-only: reset state between tests. No-op when VITEST not set. */
 export function resetSamplingState(): void {
   if (process.env.VITEST !== "true") return;
@@ -293,6 +317,7 @@ export function resetSamplingState(): void {
     if (trip.samplingTimer) clearTimeout(trip.samplingTimer);
   }
   activeTrips.clear();
+  assuranceLevelStore.clear();
   serverRef = null;
   samplingAvailable = true;
   reaperStarted = false;

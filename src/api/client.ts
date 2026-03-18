@@ -107,6 +107,47 @@ export function getBaseUrl(): string {
   return "https://www.kyalabs.io";
 }
 
+export interface IntrospectResult {
+  active: boolean;
+  assurance_level?: string | null;
+  scope?: string;
+  credential_provider?: string;
+  badge_status?: string;
+  token_type?: string;
+  install_id?: string;
+  agent_type?: string;
+}
+
+const MOCK_TOKEN_PREFIX = "pc_v1_sand";
+
+/**
+ * v2.2: Introspect a badge token to retrieve assurance_level and status.
+ * Mock tokens (pc_v1_sand*) are skipped — they return active:false from the API.
+ * Graceful null on any failure (timeout, network, non-ok response).
+ */
+export async function introspectBadgeToken(token: string): Promise<IntrospectResult | null> {
+  if (token.startsWith(MOCK_TOKEN_PREFIX)) return null;
+
+  const apiUrl = getEnvApiUrl() || "https://www.kyalabs.io";
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    const res = await fetch(`${apiUrl}/api/oauth/introspect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    return (await res.json()) as IntrospectResult;
+  } catch {
+    clearTimeout(timer);
+    return null;
+  }
+}
+
 /**
  * Call agent-identity with a Bearer token (API key or OAuth access token).
  * Used when consent key comes from device flow (OAuth token) instead of KYA_API_KEY.

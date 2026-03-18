@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.3.0] - 2026-03-17 — Merchant Signal Awareness
+
+### Added
+- `fetchSignalStatus(domain, apiUrl)` in `src/lib/signal-status.ts` — queries `/api/merchant/signal-status` to detect active UCP signals (canonical, synced to mcp-server)
+- `merchant_signals` field in `IdentityResult` — returned from `getAgentIdentity` with `signals_active` and `signal_types`
+- `signal_context_received` event fired from `getAgentIdentity` when merchant has active signals — two-path (auth/anon) matching `reportBadgePresented` pattern
+- `extractDomain()` helper in `getAgentIdentity.ts` — strips protocol/path/www from merchant URL
+
+### Notes
+- `signal_context_received` includes `signals_found: string[]` (e.g. `["window_kya_commerce", "meta_tags"]`)
+- App PR required: migration 044 (signals_found TEXT[] column), `/api/merchant/signal-status` GET endpoint
+
+## [2.2.0] - 2026-03-17 — assurance_level via Introspect
+
+### Added
+- `introspectBadgeToken(token)` in `src/api/client.ts` — POST `/api/oauth/introspect`, 3s timeout, graceful null on failure
+- `IntrospectResult` interface — `active`, `assurance_level`, `scope`, `credential_provider`, `badge_status`, `install_id`, `agent_type`
+- `registerTripAssuranceLevel(token, level)` exported from `sampling.ts` — stores assurance level for trip correlation
+- `assuranceLevelStore` in `sampling.ts` — Map<string, string|null>, FIFO-evicted at MAX_TRIPS cap
+- `assurance_level` field in `IdentityResult` — populated from introspect after token acquisition
+- `assurance_level` included in `trip_success`/`trip_failure` event payloads (both auth and anonymous paths)
+
+### Notes
+- `browse_declared` does NOT carry assurance_level — fires before token exists (architectural constraint)
+- Mock tokens (`pc_v1_sand*`) skip introspect entirely
+- Introspect adds ~200–400ms latency to `getAgentIdentity` (3s timeout, non-blocking on failure)
+
 ## [0.9.0] - 2026-03-11 — Verify Migration
 
 ### Removed
