@@ -1,4 +1,4 @@
-// Canonical: badge-server | Synced: 2.1.0 | mcp-server syncs from here
+// Canonical: badge-server | Synced: 2.3.0 | mcp-server syncs from here
 import crypto from "node:crypto";
 import * as api from "../api/client.js";
 import { getStoredConsentKey, getOrCreateInstallId } from "../lib/storage.js";
@@ -6,6 +6,8 @@ import { getEnvApiKey, getEnvApiUrl } from "../lib/env.js";
 import { getAgentModel } from "../lib/agent-model.js";
 import { initiateDeviceAuth, pollForApproval } from "../lib/device-auth.js";
 import { fetchUCPManifest, findBadgeCapability, isVersionCompatible } from "../lib/ucp-manifest.js";
+import { registerTripAssuranceLevel } from "../sampling.js";
+import { fetchSignalStatus, type SignalStatus } from "../lib/signal-status.js";
 
 const MOCK_TOKEN_PREFIX = "pc_v1_sand";
 /** Must match the kid in the JWKS published at kyalabs.io/.well-known/ucp (BUILD 3 / PRD-1) */
@@ -73,6 +75,67 @@ export interface IdentityResult {
   trip_id?: string;
   /** v2.1: Detected MCP client / agent model (e.g. "claude-desktop", "cursor") */
   agent_model?: string;
+  /** v2.2: Assurance level from introspect (starter|regular|veteran|elite|chaos) */
+  assurance_level?: string | null;
+  /** v2.3: Merchant signal status at time of identity declaration */
+  merchant_signals?: { signals_active: boolean; signal_types: string[] } | null;
+}
+
+/** v2.3: Strip protocol, path, and www. prefix to get bare domain. */
+function extractDomain(merchant: string): string {
+  try {
+    const url = merchant.includes("://") ? merchant : `https://${merchant}`;
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return merchant.replace(/^www\./, "").split("/")[0];
+  }
+}
+
+/** v2.3: Fire signal_context_received event — two-path (auth/anon), fire-and-forget. */
+async function fireSignalContextReceived(
+  signalStatus: SignalStatus,
+  tripId: string,
+  token: string,
+  installId: string,
+  merchant: string | undefined,
+  apiUrl: string,
+  consentKey: string | null
+): Promise<void> {
+  try {
+    if (consentKey) {
+      await fetch(`${apiUrl}/api/badge/report`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${consentKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          verification_token: token,
+          event_type: "signal_context_received",
+          merchant: merchant || undefined,
+          signals_found: signalStatus.signal_types,
+          trip_id: tripId,
+        }),
+      });
+    } else {
+      await fetch(`${apiUrl}/api/badge/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          install_id: installId,
+          badge_version: BADGE_VERSION,
+          event_type: "signal_context_received",
+          merchant: merchant || undefined,
+          agent_type: AGENT_TYPE,
+          signals_found: signalStatus.signal_types,
+          trip_id: tripId,
+          timestamp: Date.now(),
+        }),
+      });
+    }
+  } catch {
+    // Fire-and-forget — never affect identity response
+  }
 }
 
 let pendingActivation: Promise<IdentityResult> | null = null;
@@ -180,6 +243,34 @@ export async function getAgentIdentity(merchant?: string, merchantUrl?: string):
     !result.verification_token.startsWith(MOCK_TOKEN_PREFIX)
   ) {
     result = await enrichWithUCP(result, merchantUrl);
+  }
+
+  // v2.2: Introspect token for assurance_level — after identity acquired, before return
+  if (consentKey && !result.activation_required && result.verification_token) {
+    const introspectResult = await api.introspectBadgeToken(consentKey);
+    const assuranceLevel = introspectResult?.assurance_level ?? null;
+    registerTripAssuranceLevel(result.verification_token, assuranceLevel);
+    result.assurance_level = assuranceLevel;
+  }
+
+  // v2.3: Fetch merchant signal status and fire signal_context_received when active
+  const merchantDomain = extractDomain(merchant || result.merchant || "");
+  if (merchantDomain && !result.activation_required) {
+    const apiUrl = getEnvApiUrl() || DEFAULT_API_URL;
+    const signalStatus = await fetchSignalStatus(merchantDomain, apiUrl);
+    if (signalStatus?.signals_active && result.verification_token) {
+      const installId = getOrCreateInstallId();
+      fireSignalContextReceived(
+        signalStatus,
+        tripId,
+        result.verification_token,
+        installId,
+        merchant || result.merchant,
+        apiUrl,
+        consentKey
+      ).catch(() => {});
+    }
+    result.merchant_signals = signalStatus;
   }
 
   // v2.0: Add next_step guidance

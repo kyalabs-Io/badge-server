@@ -14,6 +14,7 @@ import {
   resetSamplingState,
   getActiveTrip,
   reportOutcomeFromAgent,
+  registerTripAssuranceLevel,
 } from "./sampling.js";
 import * as storage from "./lib/storage.js";
 
@@ -306,6 +307,83 @@ describe("sampling", () => {
       const body = JSON.parse(reportCalls[0][1].body);
       expect(body.event_type).toBe("trip_success");
       expect(body.detail).toBe("agent_moved_to_new_merchant");
+    });
+  });
+
+  // ── v2.2: assuranceLevelStore + registerTripAssuranceLevel ──────────────────
+
+  describe("v2.2: registerTripAssuranceLevel", () => {
+    // Contract 2.2.4 — stores level and patches existing active trip
+    it("patches assuranceLevel on already-active trip", () => {
+      onTripStarted("t_patch", "merchant.com");
+      registerTripAssuranceLevel("t_patch", "veteran");
+      expect(getActiveTrip("t_patch")?.assuranceLevel).toBe("veteran");
+    });
+
+    it("pre-registers before onTripStarted — trip inherits level", () => {
+      registerTripAssuranceLevel("t_pre", "starter");
+      onTripStarted("t_pre", "merchant.com");
+      expect(getActiveTrip("t_pre")?.assuranceLevel).toBe("starter");
+    });
+
+    it("handles null assurance level", () => {
+      onTripStarted("t_null", "merchant.com");
+      registerTripAssuranceLevel("t_null", null);
+      expect(getActiveTrip("t_null")?.assuranceLevel).toBeNull();
+    });
+
+    // Contract 2.2.5 — assurance_level included in outcome report payload
+    it("includes assurance_level in anonymous POST on resolve", () => {
+      mockFetch.mockClear();
+      vi.mocked(storage.getStoredConsentKey).mockReturnValue(null);
+
+      registerTripAssuranceLevel("t_report", "elite");
+      onTripStarted("t_report", "shop.com");
+      onIdentityPresented("t_report", "shop.com");
+      reportOutcomeFromAgent("t_report", "shop.com", "accepted");
+
+      const reportCalls = mockFetch.mock.calls.filter(([u]: [string]) =>
+        String(u).includes("/api/badge/report")
+      );
+      expect(reportCalls.length).toBeGreaterThan(0);
+      const body = JSON.parse(reportCalls[0][1].body as string);
+      expect(body.assurance_level).toBe("elite");
+    });
+
+    it("includes assurance_level in enriched (auth) POST on resolve", () => {
+      mockFetch.mockClear();
+      vi.mocked(storage.getStoredConsentKey).mockReturnValue("pk_live_xxx");
+
+      registerTripAssuranceLevel("t_auth", "regular");
+      onTripStarted("t_auth", "shop.com");
+      onIdentityPresented("t_auth", "shop.com");
+      reportOutcomeFromAgent("t_auth", "shop.com", "accepted");
+
+      const reportCalls = mockFetch.mock.calls.filter(([u]: [string]) =>
+        String(u).includes("/api/badge/report")
+      );
+      expect(reportCalls.length).toBeGreaterThan(0);
+      const body = JSON.parse(reportCalls[0][1].body as string);
+      expect(body.assurance_level).toBe("regular");
+    });
+
+    // Contract 2.2.7 — store cleared after resolveTrip, new trip has no stale level
+    it("new trip with same token has no stale assuranceLevel after resolve", () => {
+      registerTripAssuranceLevel("t_clear", "starter");
+      onTripStarted("t_clear", "merchant.com");
+      onIdentityPresented("t_clear", "merchant.com");
+      reportOutcomeFromAgent("t_clear", "merchant.com", "accepted");
+
+      // New trip same token — store should be cleared
+      onTripStarted("t_clear", "merchant.com");
+      expect(getActiveTrip("t_clear")?.assuranceLevel).toBeUndefined();
+    });
+
+    it("does not throw when store reaches capacity boundary", () => {
+      for (let i = 0; i < 101; i++) {
+        registerTripAssuranceLevel(`t_flood_${i}`, "starter");
+      }
+      expect(true).toBe(true); // no throw = pass
     });
   });
 
