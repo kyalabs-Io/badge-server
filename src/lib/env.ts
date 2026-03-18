@@ -32,3 +32,4 @@ export function getEnvExtendedAuth(): boolean {
   const val = resolveEnv("KYA_EXTENDED_AUTH", "PAYCLAW_EXTENDED_AUTH");
   return val === "true" || val === "1";
 }
+

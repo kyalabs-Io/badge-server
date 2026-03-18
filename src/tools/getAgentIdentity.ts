@@ -155,7 +155,7 @@ export async function getAgentIdentity(merchant?: string, merchantUrl?: string):
 
   // Backward compat: KYA_API_KEY set → use it, device flow never triggers
   if (consentKey && getEnvApiKey()) {
-    result = await callWithKey(consentKey, merchant);
+    result = await callWithKey(consentKey, merchant, tripId);
   } else if (!consentKey) {
     // No key: initiate device flow (reuse pending to avoid duplicate pollers)
     if (pendingActivation) return pendingActivation;
@@ -168,7 +168,7 @@ export async function getAgentIdentity(merchant?: string, merchantUrl?: string):
     }
   } else {
     // Key from file/memory (OAuth token from device flow)
-    result = await callWithOAuthToken(consentKey, merchant);
+    result = await callWithOAuthToken(consentKey, merchant, tripId);
   }
 
   // UCP enrichment: check merchant manifest when merchantUrl provided
@@ -227,7 +227,7 @@ async function enrichWithUCP(result: IdentityResult, merchantUrl: string): Promi
   };
 }
 
-async function callWithKey(apiKey: string, merchant?: string): Promise<IdentityResult> {
+async function callWithKey(apiKey: string, merchant?: string, tripId?: string): Promise<IdentityResult> {
   if (!api.isApiMode()) {
     return {
       product_name: "Badge by kyaLabs",
@@ -244,7 +244,7 @@ async function callWithKey(apiKey: string, merchant?: string): Promise<IdentityR
   }
 
   try {
-    const result = await api.getAgentIdentity(undefined, merchant);
+    const result = await api.getAgentIdentity(undefined, merchant, tripId);
     return {
       product_name: "Badge by kyaLabs",
       status: "active",
@@ -260,7 +260,7 @@ async function callWithKey(apiKey: string, merchant?: string): Promise<IdentityR
   }
 }
 
-async function callWithOAuthToken(token: string, merchant?: string): Promise<IdentityResult> {
+async function callWithOAuthToken(token: string, merchant?: string, tripId?: string): Promise<IdentityResult> {
   if (!api.isApiMode()) {
     return identityFromOAuthToken(token, undefined, merchant);
   }
@@ -269,7 +269,8 @@ async function callWithOAuthToken(token: string, merchant?: string): Promise<Ide
     const result = await api.getAgentIdentityWithToken(
       api.getBaseUrl(),
       token,
-      merchant
+      merchant,
+      tripId
     );
     return {
       product_name: "Badge by kyaLabs",
