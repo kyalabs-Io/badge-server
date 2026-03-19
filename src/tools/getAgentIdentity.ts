@@ -156,7 +156,7 @@ async function fireSignalContextReceived(
 let pendingActivation: Promise<IdentityResult> | null = null;
 
 const DEFAULT_API_URL = "https://www.kyalabs.io";
-const BADGE_VERSION = "2.3";
+const BADGE_VERSION = "2.4";
 const AGENT_TYPE = "badge-mcp";
 const NEXT_STEP_TEXT =
   "When visiting a merchant, report your badge presentation using kya_reportBadgePresented with the merchant domain and your verification token.";
