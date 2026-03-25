@@ -42,7 +42,10 @@ export async function enrollAndCacheBadgeToken(merchant: string): Promise<string
   try {
     const res = await fetch(`${apiUrl}/api/badge/enroll`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${consentKey}`,
+      },
       body: JSON.stringify({ merchant, install_id: installId }),
       signal: AbortSignal.timeout(ENROLL_TIMEOUT_MS),
     });
