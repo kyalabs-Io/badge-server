@@ -24,7 +24,7 @@
     "prepublishOnly": "bash scripts/prepublish-check.sh"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.28.0",
     "zod": "^3.24.0 || ^4.0.0"
   },
   "devDependencies": {
