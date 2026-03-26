@@ -25,11 +25,17 @@ jobs:
 
       - run: npm ci
 
+      - name: Build shared package
+        run: cd packages/shared && npm ci && npm run build
+
       - name: Lint
         run: npm run lint
 
       - name: Build
         run: npm run build
+
+      - name: Test shared package
+        run: cd packages/shared && npx vitest run
 
       - name: Test
         run: npx vitest run
