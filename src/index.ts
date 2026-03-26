@@ -11,6 +11,7 @@ import {
   getAuthMode,
   initAgentModel,
   configureReportBadge,
+  fireServerPing,
 } from "@kyalabs/shared-identity";
 import { getHeaders } from "./tools/getHeaders.js";
 import { webFetch } from "./tools/webFetch.js";
@@ -234,6 +235,9 @@ async function main() {
 
   // v2.1: Detect agent model from MCP client handshake
   initAgentModel(server.server);
+
+  // Tier 1: Anonymous server ping (opt-out: KYA_PING=false)
+  fireServerPing("2.5.0");
 
   // Handle clean shutdown — flush pending telemetry before exit
   process.on("SIGINT", async () => {

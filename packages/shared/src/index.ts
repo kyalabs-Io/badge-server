@@ -45,6 +45,8 @@ export {
   _resetBadgeTokenCache,
 } from "./lib/badge-token.js";
 
+export { fireServerPing } from "./lib/server-ping.js";
+
 export {
   fetchUCPManifest,
   findBadgeCapability,
