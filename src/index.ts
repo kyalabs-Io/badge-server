@@ -21,7 +21,7 @@ configureReportBadge({ agentType: "badge-mcp" });
 
 const server = new McpServer({
   name: "kyalabs-badge",
-  version: "2.5.0",
+  version: "2.6.0",
 });
 
 server.tool(
@@ -237,7 +237,7 @@ async function main() {
   initAgentModel(server.server);
 
   // Tier 1: Anonymous server ping (opt-out: KYA_PING=false)
-  fireServerPing("2.5.0");
+  fireServerPing("2.6.0");
 
   // Handle clean shutdown — flush pending telemetry before exit
   process.on("SIGINT", async () => {
