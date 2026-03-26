@@ -1,0 +1,55 @@
+name: Publish @kyalabs/shared-identity
+
+on:
+  push:
+    tags:
+      - 'shared-identity-v*'
+
+concurrency:
+  group: publish-shared-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        working-directory: packages/shared
+        run: npm ci
+
+      - name: Build
+        working-directory: packages/shared
+        run: npm run build
+
+      - name: Test
+        working-directory: packages/shared
+        run: npx vitest run
+
+      - name: Verify version matches tag
+        working-directory: packages/shared
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#shared-identity-v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+          echo "Publishing @kyalabs/shared-identity@$PKG_VERSION"
+
+      - name: Publish
+        working-directory: packages/shared
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
