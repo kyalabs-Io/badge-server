@@ -41,6 +41,7 @@ export async function issueGuestPass(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         install_id: installId,
+        iss: "sdk",
         platform: platform ?? `node/${process.version}`,
         agent_client: agentClient,
         badge_version: badgeVersion ?? "1.0.0",
@@ -54,7 +55,7 @@ export async function issueGuestPass(
 
     const data = await res.json();
     const result: GuestPassResult = {
-      token: data.token,
+      token: data.guest_token,
       expiresAt: data.expires_at,
       identityType: "guest",
     };
