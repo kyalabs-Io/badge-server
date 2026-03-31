@@ -1,6 +1,11 @@
 # @kyalabs/badge-sdk
 
-Badge identity primitive for AI agents. Framework-agnostic — no MCP dependency.
+Persistent identity for AI agents across merchant sites. Agents that carry Badge build a behavioral trust score (kyaScore, 500–850) that improves merchant routing over time.
+
+Framework-agnostic. No MCP dependency. Zero-config.
+
+[![npm](https://img.shields.io/npm/v/@kyalabs/badge-sdk)](https://www.npmjs.com/package/@kyalabs/badge-sdk)
+[![license](https://img.shields.io/npm/l/@kyalabs/badge-sdk)](LICENSE)
 
 ## Install
 
@@ -17,24 +22,33 @@ import { Badge } from '@kyalabs/badge-sdk'
 
 const badge = await Badge.init()
 
-// Inject identity into outgoing requests
+// Attach to outgoing requests
 const headers = badge.headers()
 // { "Kya-Token": "gp_v1_..." }
 
-// Check identity state
+// Identity state
 badge.identityType  // "guest" | "verified" | "offline"
 badge.isGuest       // true for guest/offline
-badge.installId     // persistent UUID (stored in ~/.kya/)
+badge.installId     // persistent UUID
 
-// Clean up
 badge.destroy()
 ```
 
+No signup. No API key. `Badge.init()` works immediately.
+
+## Why Badge
+
+**Today:** Agents carrying Badge get tracked across merchant sites via [MCP sampling](https://modelcontextprotocol.io/docs/concepts/sampling). Platforms integrating Badge can surface agentic behavior insights to enterprise clients for free — which agents visited, how far they got, where they dropped off.
+
+**Tomorrow:** As agents accumulate interactions, kyaScore builds. Merchants running VerifAi route based on score — higher-scored agents skip friction, get priority access, convert more. Unbadged agents stay anonymous and keep hitting walls.
+
 ## How It Works
 
-On first run, `Badge.init()` issues a guest pass from the kya API ("SSN on birth"). The token and install ID are cached to `~/.kya/` so they persist across process restarts.
+`Badge.init()` issues a guest pass from the kya API on first run. The token and install ID are cached to `~/.kya/` and persist across process restarts.
 
-Agents carry their guest pass in the `Kya-Token` HTTP header. Merchants verify tokens via the [VerifAi API](https://www.kyalabs.io/docs). Guest passes can upgrade to verified badges through device auth or merchant enrollment.
+Agents carry identity in the `Kya-Token` HTTP header on outgoing requests. Guest passes upgrade to merchant-specific badge tokens through enrollment. Every merchant interaction feeds kyaScore.
+
+Integrated at the platform level. Every agent session inherits identity automatically.
 
 ### Identity Lifecycle
 
@@ -51,6 +65,7 @@ Badge.init()  →  guest pass (gp_v1_*)  →  enroll at merchant  →  badge tok
 | `KYA_API_URL` | API base URL | `https://www.kyalabs.io` |
 | `KYA_API_KEY` | Consent key for enrollment (`pk_live_*` / `pk_test_*`) | — |
 | `KYA_EXTENDED_AUTH` | Enable device auth flow (`true` / `1`) | `false` |
+| `KYA_PING` | Telemetry ping on server start (`true` / `false`) | `true` |
 
 Legacy `PAYCLAW_*` prefixes are supported with a deprecation warning.
 
@@ -63,7 +78,7 @@ Create a Badge instance. Issues a guest pass on first run, reuses cache on subse
 ```typescript
 const badge = await Badge.init({
   installId: 'custom-uuid',    // override auto-generated ID (for Docker/CI)
-  platform: 'node/v20.0.0',   // platform string for telemetry
+  platform: 'node/v20.0.0',   // platform string
   agentClient: 'my-agent',    // agent identifier
 })
 ```
@@ -106,15 +121,51 @@ Low-level guest pass issuance. Returns `null` on failure (caller falls back to o
 
 Retrieve a cached badge token. If no merchant specified, returns the most recently enrolled token.
 
-## Credential Storage
+## Data
 
-Tokens are stored in `~/.kya/`:
+All identity is opt-in. No PII leaves the agent.
+
+| Event | Data Sent | Why | Default | Configurable |
+|---|---|---|---|---|
+| **Server start** | Badge version, MCP client name (random session ID, not stored) | Uptime monitoring, version distribution | Auto | `KYA_PING=false` disables |
+| **`Badge.init()`** | `install_id` (random UUID, generated and stored locally) | Persistent identity across sessions | Auto | `installId` override in opts |
+| **First merchant visit** | `install_id`, merchant domain, agent type, timestamp | Minimum signal for merchant insights | Auto | — |
+| **Enrollment** (user-initiated) | Merchant-specific token hash | Per-merchant trust building | Only on user approval | Requires `KYA_API_KEY` |
+
+The `install_id` is a file on disk (`~/.kya/install_id`). Delete it and get a new one.
+
+Telemetry can be disabled entirely: `KYA_PING=false`. Guest pass identity still works.
+
+Full data practices: [kyalabs.io/trust](https://kyalabs.io/trust)
+
+## Credential Storage
 
 ```
 ~/.kya/
   install_id      # persistent UUID
   guest_token     # cached guest pass { token, expiresAt }
 ```
+
+## Status
+
+Actively maintained by [kya labs](https://kyalabs.io). Badge is the core identity primitive across all kya products.
+
+| | |
+|---|---|
+| **Current version** | See npm badge above |
+| **Release cadence** | Semver. Breaking changes only on major bumps. |
+| **Tests** | CI on every PR |
+| **Changelog** | [CHANGELOG.md](CHANGELOG.md) |
+
+## Badge MCP Server
+
+For MCP client users (Claude Desktop, Cursor, etc.), Badge also ships as an MCP server with tools for identity, web fetch, and header injection:
+
+```bash
+npx @kyalabs/badge
+```
+
+The MCP server uses this SDK internally. See [@kyalabs/badge](https://www.npmjs.com/package/@kyalabs/badge) for MCP-specific docs.
 
 ## License
 
