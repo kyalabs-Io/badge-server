@@ -6,20 +6,22 @@
 
 import { getStoredConsentKey, getOrCreateInstallId } from "./storage.js";
 import { getEnvApiUrl } from "./env.js";
-import { getAgentModel } from "./agent-model.js";
 
 const DEFAULT_API_URL = "https://www.kyalabs.io";
 const BADGE_VERSION = "2.4";
 
 /** Agent type for telemetry payloads. Set via configureReportBadge(). */
 let agentType = "badge-mcp";
+/** Agent model string for telemetry enrichment. Set via configureReportBadge(). */
+let agentModel: string | undefined;
 
 /**
- * Configure the agent_type string used in anonymous telemetry payloads.
- * Call once at startup: configureReportBadge({ agentType: "mcp-server" })
+ * Configure the agent_type and optional agent_model strings used in telemetry payloads.
+ * Call once at startup: configureReportBadge({ agentType: "badge-mcp", agentModel: "claude-3.5-sonnet" })
  */
-export function configureReportBadge(opts: { agentType: string }): void {
+export function configureReportBadge(opts: { agentType: string; agentModel?: string }): void {
   agentType = opts.agentType;
+  if (opts.agentModel !== undefined) agentModel = opts.agentModel;
 }
 
 export async function reportBadgePresented(
@@ -69,7 +71,7 @@ export async function reportBadgePresented(
           event_type: "identity_presented",
           merchant,
           agent_type: agentType,
-          agent_model: getAgentModel(),
+          agent_model: agentModel,
           timestamp: Date.now(),
           ...(context && { presentation_context: context }),
           ...(tripId && { trip_id: tripId }),
@@ -136,7 +138,7 @@ export async function reportBadgeNotPresented(
           merchant,
           reason,
           agent_type: agentType,
-          agent_model: getAgentModel(),
+          agent_model: agentModel,
           timestamp: Date.now(),
           ...(tripId && { trip_id: tripId }),
         }),
