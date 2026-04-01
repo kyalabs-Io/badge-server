@@ -88,4 +88,38 @@ describe("Badge", () => {
       expect(() => badge.destroy()).not.toThrow();
     });
   });
+
+  describe("Badge.init with existingToken", () => {
+    it("uses existingToken when provided with gp_v1_ prefix", async () => {
+      const badge = await Badge.init({ existingToken: "gp_v1_test123abc" });
+      expect(badge.token).toBe("gp_v1_test123abc");
+      expect(badge.identityType).toBe("guest");
+      expect(badge.isGuest).toBe(true);
+    });
+
+    it("ignores existingToken without gp_v1_ prefix", async () => {
+      const badge = await Badge.init({ existingToken: "invalid_token_format" });
+      expect(badge.token).not.toBe("invalid_token_format");
+    });
+
+    it("combines existingToken with custom installId", async () => {
+      const badge = await Badge.init({
+        existingToken: "gp_v1_xyz789",
+        installId: "custom-id-123",
+      });
+      expect(badge.token).toBe("gp_v1_xyz789");
+      expect(badge.installId).toBe("custom-id-123");
+    });
+
+    it("does not cache existingToken (unknown TTL)", async () => {
+      await Badge.init({ existingToken: "gp_v1_cached_token" });
+      expect(guestPass.cacheGuestPass).not.toHaveBeenCalled();
+    });
+
+    it("does not call issueGuestPass when existingToken is valid", async () => {
+      vi.mocked(guestPass.issueGuestPass).mockClear();
+      await Badge.init({ existingToken: "gp_v1_skip_issue" });
+      expect(guestPass.issueGuestPass).not.toHaveBeenCalled();
+    });
+  });
 });
