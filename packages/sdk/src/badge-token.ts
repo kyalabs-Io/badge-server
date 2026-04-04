@@ -55,7 +55,20 @@ export async function enrollAndCacheBadgeToken(merchant: string): Promise<string
       return null;
     }
 
-    const data = (await res.json()) as { badge_token?: string };
+    const data = (await res.json()) as { badge_token?: string; existing?: boolean };
+
+    // Idempotent re-enrollment: API returns { existing: true } without a badge_token
+    // because the token was hashed on first enrollment and can't be reversed.
+    // The SDK must persist the badge_token from the original 201 response.
+    if (data.existing && !data.badge_token) {
+      // Already enrolled today — use cached token if we have one
+      const cached = badgeTokenCache.get(merchant);
+      if (cached) return cached;
+      // No cached token (process restarted) — can't recover until next day
+      process.stderr.write(`[badge] already enrolled at ${merchant} today but no cached token — persist badge_token on first enrollment\n`);
+      return null;
+    }
+
     if (!data.badge_token) {
       process.stderr.write(`[badge] enroll response missing badge_token\n`);
       return null;

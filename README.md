@@ -37,9 +37,9 @@ That's it. No API key. No signup. No network calls on install.
 
 The first time your agent calls `kya_getAgentIdentity`, Badge activates — your agent declares itself to the merchant and gets back a response with instructions for the next step. One anonymous event is recorded: this install visited this merchant at this time.
 
-### Upgrade to verified mode
+### Upgrade to enrolled mode
 
-For cryptographic identity (ES256-signed JWT, same curve as Apple Pay), add an API key:
+To enroll at merchants and build trust history (kyaScore), add an API key:
 
 ```json
 "env": {
@@ -49,7 +49,7 @@ For cryptographic identity (ES256-signed JWT, same curve as Apple Pay), add an A
 
 Get your API key at [kyalabs.io/signup](https://kyalabs.io/signup). API keys don't expire.
 
-Without an API key, Badge uses device auth when a merchant requires verified identity — your agent shows a code and URL, you approve on your phone. This only happens when a merchant asks for it. We never ask for it ourselves. Sign up + API key means 1. you dont have to use phone OAuth every time and 2. you can track your agentic shopping (custom avatars included)
+Without an API key, Badge uses device auth when a merchant requires verified identity — your agent shows a code and URL, you approve on your phone. This only happens when a merchant asks for it. We never ask for it ourselves. Sign up + API key means 1. you don't have to use phone OAuth every time and 2. you can track your agentic shopping (custom avatars included)
 
 ### Node version
 
@@ -59,21 +59,21 @@ If you see engine or compatibility errors: `node -v` — install Node 20+ from [
 
 ---
 
-## How Badge Works: Two Modes
+## How Badge Works: Identity Tiers
 
-### Declared (default)
+### Guest (default)
 
-First time your agent goes to a merchant with Badge, Badge generates an anonymous install ID — a random UUID stored locally at `~/.kya/install_id`. It has no connection to you, your device, or any personal information.
+First time your agent calls `kya_getAgentIdentity`, Badge generates an anonymous install ID (random UUID stored locally at `~/.kya/install_id`) and issues a guest pass (`gp_v1_*`). No connection to you, your device, or any personal information.
 
-Your agent gets back a declaration and a `next_step` guiding it to report its badge presentation at the merchant.
+Your agent carries the guest pass in the `Kya-Token` HTTP header on every request. Merchants running VerifAi middleware can see your agent, verify it, and route it. This is the default mode. It's how Badge works out of the box, for every user, forever.
 
-This is the default mode. It's how Badge works out of the box, for every user, forever.
+### Enrolled (per merchant)
+
+When your agent visits a merchant, it can enroll for a merchant-specific badge token (`kya_*`). This upgrades the agent from "anonymous guest" to "declared actor at this store." Each merchant enrollment builds trust history that feeds into kyaScore (500-850 behavioral trust score).
 
 ### Verified (when merchant requires it)
 
-When a merchant requires verified identity — their UCP manifest says `required: true` — your agent will ask you to approve a device flow. You visit a merchant-kya URL, enter the OAuth code from your agent, and prove you're a real person.
-
-Badge issues a tokenized credential: an ES256-signed JWT, signed by kya's private key, verifiable locally by the merchant. Your agent is free to continue - no login, PII or anything needed. 
+When a merchant requires verified identity, your agent will ask you to approve a device flow. You visit a URL, enter the code from your agent, and prove you're a real person. No login or PII needed.
 
 ---
 
@@ -120,16 +120,25 @@ We believe the UCP is the future of commerce and are proud to support reduce fri
 
 | Tool | Description |
 |------|-------------|
-| `kya_getAgentIdentity` | Declare identity, get verification token + `next_step` guidance |
+| `kya_getAgentIdentity` | Get your agent's identity token + `next_step` guidance |
+| `kya_web_fetch` | Fetch a URL with Badge identity headers attached automatically |
+| `kya_getHeaders` | Get identity headers (`Kya-Token`) for manual HTTP requests |
+
+Every tool call works immediately — no auth required. Events fire in both guest and verified modes.
+
+### Legacy Tools (deprecating)
+
+These tools still work but are no longer needed — Badge 2.0 handles reporting automatically via the `Kya-Token` header.
+
+| Tool | Description |
+|------|-------------|
 | `kya_reportBadgePresented` | Signal that you presented your Badge to a merchant |
 | `kya_reportBadgeOutcome` | Report whether merchant accepted or denied the badge |
 | `kya_reportBadgeNotPresented` | Report that the badge was not presented |
 
-Every tool call works immediately — no auth required. Events fire in both anonymous and verified modes.
-
 ### Extended Auth (optional)
 
-When enabled, kya checks back with your agent 7 seconds after each badge presentation to confirm whether the merchant accepted or denied. Results are logged to your dashboard so you can see when and which merchants are rejecting your agent. 
+When enabled, kya checks back with your agent after each badge presentation to confirm whether the merchant accepted or denied. Results are logged to your dashboard.
 
 ```json
 "env": {
@@ -139,15 +148,16 @@ When enabled, kya checks back with your agent 7 seconds after each badge present
 
 ---
 
-## What's New (v2.3)
+## What's New (v2.6)
 
 | Capability | Description |
 |---|---|
-| `assurance_level` | Every trip now carries a trust score (`starter` → `elite`) sourced from token introspection. Visible in your dashboard and included in all trip outcome events. |
-| Merchant signal awareness | `kya_getAgentIdentity` now detects whether a merchant has active kya signal infrastructure (`window.__kya_commerce`, meta tags, llms.txt). Returned as `merchant_signals` in the identity result. |
-| Anonymous-first | Badge works on install. No auth, no signup, no network on install. First `kya_getAgentIdentity` call fires `browse_declared` automatically. |
-| Enrichment branching | Anonymous events fire without auth. Verified events include full user context. No silent gates. |
+| Guest pass identity | `Badge.init()` issues a guest pass (`gp_v1_*`) automatically. Your agent has identity from the first call — no signup, no auth. |
+| `Kya-Token` header | Your agent carries identity on every HTTP request via `kya_web_fetch` or manual header attachment. Merchants verify server-side. |
+| kyaScore (500-850) | Behavioral trust score replacing static tiers. Five bands: Restricted / Provisional / Baseline / Established / Elite. Builds from your agent's declaration and enrollment history. |
+| Merchant signal awareness | `kya_getAgentIdentity` detects whether a merchant has active kya infrastructure. Returned as `merchant_signals` in the identity result. |
 | `next_step` field | Every `kya_getAgentIdentity` response includes guidance for the agent's next action. |
+| `kya_web_fetch` + `kya_getHeaders` | Two new tools for carrying identity outside MCP — fetch with headers attached, or get headers for your own HTTP client. |
 
 ---
 
@@ -158,6 +168,16 @@ Badge is the base layer. For virtual Visa cards, use [@kyalabs/mcp-server](https
 ```bash
 npx @kyalabs/mcp-server
 ```
+
+## Badge SDK (for platform builders)
+
+Building an agent framework, MCP server, or browser automation tool? Use the SDK directly — no MCP dependency:
+
+```bash
+npm install @kyalabs/badge-sdk
+```
+
+See [@kyalabs/badge-sdk](https://www.npmjs.com/package/@kyalabs/badge-sdk) for the programmatic API.
 
 ## KYA — Know Your Agent
 
