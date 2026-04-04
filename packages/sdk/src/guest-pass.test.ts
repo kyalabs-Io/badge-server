@@ -30,7 +30,7 @@ describe("guest-pass", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("issueGuestPass()", () => {

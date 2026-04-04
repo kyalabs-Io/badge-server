@@ -20,7 +20,7 @@ describe("reportBadgePresented", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
     delete process.env.KYA_API_KEY;
     delete process.env.KYA_API_URL;
   });
@@ -209,7 +209,7 @@ describe("reportBadgeNotPresented", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   // --- Authenticated mode ---
