@@ -24,7 +24,7 @@ describe("getOrCreateInstallId", () => {
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("returns existing ID when ~/.kya/install_id file exists", () => {
