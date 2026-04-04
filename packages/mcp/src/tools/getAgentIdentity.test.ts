@@ -48,7 +48,7 @@ describe("getAgentIdentity — browse_declared auto-fire", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("fires browse_declared when no consent key (activation path)", async () => {
@@ -167,7 +167,7 @@ describe("getAgentIdentity — browse_declared auto-fire", () => {
   it("[EC-5] identity still returned when getOrCreateInstallId throws", async () => {
     vi.mocked(sharedIdentity.getStoredConsentKey).mockReturnValue("pk_test_xxx");
     vi.mocked(api.isApiMode).mockReturnValue(false);
-    vi.mocked(sharedIdentity.getOrCreateInstallId).mockImplementation(() => {
+    vi.mocked(sharedIdentity.getOrCreateInstallId).mockImplementationOnce(() => {
       throw new Error("homedir unavailable");
     });
 
@@ -189,7 +189,7 @@ describe("getAgentIdentity — trip_id (v2.1)", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("response includes trip_id as a valid UUID", async () => {
@@ -274,7 +274,7 @@ describe("getAgentIdentity — next_step field", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("response includes next_step in mock mode", async () => {
@@ -320,7 +320,7 @@ describe("getAgentIdentity — v2.2: assurance_level", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   // Contract 2.2.6 — IdentityResult includes assurance_level from introspect
@@ -372,7 +372,7 @@ describe("getAgentIdentity — v2.3: merchant_signals", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   // Contract 2.3.9 — getAgentIdentity result includes merchant_signals
