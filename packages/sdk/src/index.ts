@@ -8,7 +8,16 @@ export { Badge, type IdentityType, type BadgeInitOptions } from "./badge.js";
 export { issueGuestPass, loadCachedGuestPass, cacheGuestPass, type GuestPassResult } from "./guest-pass.js";
 
 // --- Types ---
-export type { AgentIdentityResponse } from "./types.js";
+export type {
+  AgentIdentityResponse,
+  BadgeVisitContext,
+  BadgeEventSource,
+  BadgeRecordedAs,
+  BadgeOutcome,
+  DeclareResult,
+  OutcomeResult,
+  FrictionReason,
+} from "./types.js";
 
 // --- Device auth ---
 export {
@@ -33,6 +42,11 @@ export { getEnvApiKey, getEnvApiUrl, getEnvExtendedAuth } from "./env.js";
 
 // --- Outcome parsing ---
 export { parseResponse } from "./parse-outcome.js";
+
+// --- X1 lifecycle helpers ---
+export { inferContextFromUrl } from "./context-inference.js";
+export { postDeclareVisit } from "./declare-visit.js";
+export { postReportOutcome } from "./report-outcome.js";
 
 // --- Signal status ---
 export {

@@ -6,9 +6,10 @@
 
 import { getStoredConsentKey, getOrCreateInstallId } from "./storage.js";
 import { getEnvApiUrl } from "./env.js";
+import { BADGE_VERSION } from "./version.js";
 
 const DEFAULT_API_URL = "https://www.kyalabs.io";
-const BADGE_VERSION = "2.4";
+const warnedDeprecations = new Set<string>();
 
 /** Agent type for telemetry payloads. Set via configureReportBadge(). */
 let agentType = "badge-mcp";
@@ -27,6 +28,17 @@ export function configureReportBadge(opts: { agentType: string; agentModel?: str
   }
 }
 
+function warnDeprecated(key: string, message: string): void {
+  if (warnedDeprecations.has(key)) return;
+  warnedDeprecations.add(key);
+  console.warn(message);
+}
+
+export function _resetTelemetryWarnings(): void {
+  if (process.env.VITEST !== "true") return;
+  warnedDeprecations.clear();
+}
+
 export async function reportBadgePresented(
   verificationToken: string,
   merchant: string,
@@ -34,6 +46,10 @@ export async function reportBadgePresented(
   checkoutSessionId?: string,
   tripId?: string
 ): Promise<void> {
+  warnDeprecated(
+    "reportBadgePresented",
+    "Deprecated. Use `badge.declareVisit({ context: 'addtocart' })`. Still functional for v1.",
+  );
   const apiUrl = getEnvApiUrl() || DEFAULT_API_URL;
   const key = getStoredConsentKey();
   const installId = getOrCreateInstallId();
@@ -101,6 +117,10 @@ export async function reportBadgeNotPresented(
   reason: "abandoned" | "merchant_didnt_ask" | "other",
   tripId?: string
 ): Promise<void> {
+  warnDeprecated(
+    "reportBadgeNotPresented",
+    "Deprecated. Use `badge.reportOutcome({ outcome: 'unparseable' })`. Still functional for v1.",
+  );
   const apiUrl = getEnvApiUrl() || DEFAULT_API_URL;
   const key = getStoredConsentKey();
   const installId = getOrCreateInstallId();
