@@ -47,6 +47,7 @@ export { parseResponse } from "./parse-outcome.js";
 export { inferContextFromUrl } from "./context-inference.js";
 export { postDeclareVisit } from "./declare-visit.js";
 export { postReportOutcome } from "./report-outcome.js";
+export { BADGE_VERSION } from "./version.js";
 
 // --- Signal status ---
 export {

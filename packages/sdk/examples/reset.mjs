@@ -12,5 +12,5 @@ const targets = [
 for (const target of targets) {
   if (!existsSync(target)) continue;
   rmSync(target);
-  console.log(`removed ${target}`);
+  process.stdout.write(`removed ${target}\n`);
 }

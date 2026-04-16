@@ -1,3 +1,4 @@
+/* eslint-env node */
 import {
   Badge,
   enrollAndCacheBadgeToken,
@@ -41,7 +42,7 @@ async function main() {
   const run2 = await runLeg(badgeB, "merchant-b.test", ["arrival", "addtocart"]);
   const run3 = await runLeg(badgeA, "merchant-a.test", ["arrival"]);
 
-  console.log(JSON.stringify({
+  process.stdout.write(JSON.stringify({
     installId,
     runs: {
       merchantA1: run1,
@@ -49,10 +50,10 @@ async function main() {
       merchantA2: run3,
     },
     nextStep: "Query badge_events and kya_scores for this installId to verify DC2/DC3.",
-  }, null, 2));
+  }, null, 2) + "\n");
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  process.stderr.write((error instanceof Error ? error.message : String(error)) + "\n");
   process.exitCode = 1;
 });
