@@ -1,4 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+
+vi.mock("node:fs", () => ({
+  existsSync: vi.fn(() => false),
+  mkdirSync: vi.fn(),
+  readFileSync: vi.fn(),
+  writeFileSync: vi.fn(),
+}));
+
+vi.mock("node:os", () => ({
+  homedir: vi.fn(() => "/tmp/test-home"),
+}));
 
 vi.mock("./storage.js", () => ({
   getStoredConsentKey: vi.fn(),
@@ -17,11 +29,19 @@ import {
 import { getStoredConsentKey } from "./storage.js";
 
 const mockGetKey = vi.mocked(getStoredConsentKey);
+const mockExistsSync = vi.mocked(existsSync);
+const mockMkdirSync = vi.mocked(mkdirSync);
+const mockReadFileSync = vi.mocked(readFileSync);
+const mockWriteFileSync = vi.mocked(writeFileSync);
 let mockFetch: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   _resetBadgeTokenCache();
   mockGetKey.mockReturnValue("pk_test_abc123");
+  mockExistsSync.mockReturnValue(false);
+  mockReadFileSync.mockReset();
+  mockWriteFileSync.mockReset();
+  mockMkdirSync.mockReset();
   mockFetch = vi.fn();
   vi.stubGlobal("fetch", mockFetch);
 });
@@ -69,7 +89,10 @@ describe("enrollAndCacheBadgeToken", () => {
   it("returns cached token on second call (no API hit)", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ badge_token: "kya_first_call" }),
+      json: () => Promise.resolve({
+        badge_token: "kya_first_call",
+        expires_at: "2099-01-01T00:00:00.000Z",
+      }),
     });
 
     await enrollAndCacheBadgeToken("etsy.com");
@@ -122,6 +145,66 @@ describe("enrollAndCacheBadgeToken", () => {
     const token = await enrollAndCacheBadgeToken("etsy.com");
     expect(token).toBeNull();
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("persists the badge token to ~/.kya/badge_tokens.json", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        badge_token: "kya_persisted",
+        expires_at: "2099-01-01T00:00:00.000Z",
+      }),
+    });
+
+    await enrollAndCacheBadgeToken("etsy.com");
+
+    expect(mockMkdirSync).toHaveBeenCalled();
+    expect(mockWriteFileSync).toHaveBeenCalledWith(
+      expect.stringContaining(".kya/badge_tokens.json"),
+      expect.stringContaining("\"inst-aaaa-bbbb-cccc-dddddddddddd:etsy.com\""),
+      expect.objectContaining({ encoding: "utf-8" }),
+    );
+  });
+
+  it("loads a persisted badge token after process restart without hitting the network", async () => {
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValue(
+      JSON.stringify({
+        "inst-aaaa-bbbb-cccc-dddddddddddd:etsy.com": {
+          token: "kya_from_disk",
+          expiresAt: "2099-01-01T00:00:00.000Z",
+        },
+      }),
+    );
+
+    const token = await enrollAndCacheBadgeToken("etsy.com");
+
+    expect(token).toBe("kya_from_disk");
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("ignores expired persisted tokens and re-enrolls", async () => {
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValue(
+      JSON.stringify({
+        "inst-aaaa-bbbb-cccc-dddddddddddd:etsy.com": {
+          token: "kya_expired",
+          expiresAt: "2000-01-01T00:00:00.000Z",
+        },
+      }),
+    );
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        badge_token: "kya_fresh",
+        expires_at: "2099-01-01T00:00:00.000Z",
+      }),
+    });
+
+    const token = await enrollAndCacheBadgeToken("etsy.com");
+
+    expect(token).toBe("kya_fresh");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });
 

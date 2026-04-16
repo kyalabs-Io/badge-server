@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Badge } from "./badge.js";
-import * as storage from "./storage.js";
 import * as guestPass from "./guest-pass.js";
+import { postDeclareVisit } from "./declare-visit.js";
+import { postReportOutcome } from "./report-outcome.js";
 
 vi.mock("./storage.js", () => ({
   getOrCreateInstallId: vi.fn(() => "inst-aaaa-bbbb-cccc-dddddddddddd"),
@@ -19,6 +20,23 @@ vi.mock("./guest-pass.js", () => ({
   })),
   loadCachedGuestPass: vi.fn(() => null),
   cacheGuestPass: vi.fn(),
+}));
+
+vi.mock("./declare-visit.js", () => ({
+  postDeclareVisit: vi.fn(async () => ({
+    recordedAs: "declared" as const,
+    source: "sdk" as const,
+    merchant: "merchant.test",
+    runId: "11111111-1111-4111-8111-111111111111",
+  })),
+}));
+
+vi.mock("./report-outcome.js", () => ({
+  postReportOutcome: vi.fn(async () => ({
+    recordedAs: "reported" as const,
+    merchant: "merchant.test",
+    runId: "11111111-1111-4111-8111-111111111111",
+  })),
 }));
 
 describe("Badge", () => {
@@ -86,6 +104,54 @@ describe("Badge", () => {
     it("does not throw", async () => {
       const badge = await Badge.init();
       expect(() => badge.destroy()).not.toThrow();
+    });
+  });
+
+  describe("X1 lifecycle methods", () => {
+    it("startRun returns a UUID", async () => {
+      const badge = await Badge.init();
+      expect(badge.startRun()).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+    });
+
+    it("declareVisit forwards the badge token and inferred context", async () => {
+      const badge = await Badge.init({ existingToken: "kya_test123abc" });
+
+      await badge.declareVisit({
+        merchant: "merchant.test",
+        runId: "11111111-1111-4111-8111-111111111111",
+        url: "https://merchant.test/cart",
+      });
+
+      expect(postDeclareVisit).toHaveBeenCalledWith(
+        "kya_test123abc",
+        expect.objectContaining({
+          merchant: "merchant.test",
+          runId: "11111111-1111-4111-8111-111111111111",
+          context: "addtocart",
+        }),
+      );
+    });
+
+    it("reportOutcome forwards the installId and badge token", async () => {
+      const badge = await Badge.init({ existingToken: "kya_test123abc" });
+
+      await badge.reportOutcome({
+        merchant: "merchant.test",
+        runId: "11111111-1111-4111-8111-111111111111",
+        outcome: "not_denied",
+      });
+
+      expect(postReportOutcome).toHaveBeenCalledWith(
+        "kya_test123abc",
+        expect.objectContaining({
+          installId: "inst-aaaa-bbbb-cccc-dddddddddddd",
+          merchant: "merchant.test",
+          runId: "11111111-1111-4111-8111-111111111111",
+          outcome: "not_denied",
+        }),
+      );
     });
   });
 

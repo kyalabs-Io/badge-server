@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  _resetTelemetryWarnings,
   reportBadgePresented,
   reportBadgeNotPresented,
 } from "./telemetry.js";
@@ -12,17 +13,33 @@ vi.mock("./storage.js", () => ({
 
 describe("reportBadgePresented", () => {
   const mockFetch = vi.fn();
+  let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    _resetTelemetryWarnings();
     vi.stubGlobal("fetch", mockFetch);
     mockFetch.mockResolvedValue({ ok: true });
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.clearAllMocks();
+    warnSpy.mockRestore();
     delete process.env.KYA_API_KEY;
     delete process.env.KYA_API_URL;
+  });
+
+  it("warns once that reportBadgePresented is deprecated", async () => {
+    vi.mocked(storage.getStoredConsentKey).mockReturnValue("pk_test_xxx");
+
+    await reportBadgePresented("tok", "merchant.com");
+    await reportBadgePresented("tok", "merchant.com");
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Deprecated. Use `badge.declareVisit({ context: 'addtocart' })`. Still functional for v1.",
+    );
   });
 
   // --- Authenticated mode (existing behavior + enrichment) ---
@@ -201,15 +218,31 @@ describe("reportBadgePresented", () => {
 
 describe("reportBadgeNotPresented", () => {
   const mockFetch = vi.fn();
+  let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    _resetTelemetryWarnings();
     vi.stubGlobal("fetch", mockFetch);
     mockFetch.mockResolvedValue({ ok: true });
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.clearAllMocks();
+    warnSpy.mockRestore();
+  });
+
+  it("warns once that reportBadgeNotPresented is deprecated", async () => {
+    vi.mocked(storage.getStoredConsentKey).mockReturnValue("pk_test_xxx");
+
+    await reportBadgeNotPresented("tok", "merchant.com", "abandoned");
+    await reportBadgeNotPresented("tok", "merchant.com", "abandoned");
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Deprecated. Use `badge.reportOutcome({ outcome: 'unparseable' })`. Still functional for v1.",
+    );
   });
 
   // --- Authenticated mode ---

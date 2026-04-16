@@ -7,14 +7,25 @@
  * Usage:
  *   const badge = await Badge.init()
  *   badge.headers()       // { "Kya-Token": "gp_v1_..." }
- *   badge.fetch(url)      // auto header injection
  *   badge.destroy()       // flush telemetry
  *
  * KYA-164
  */
 
+import { randomUUID } from "node:crypto";
 import { getOrCreateInstallId } from "./storage.js";
-import { issueGuestPass, loadCachedGuestPass, type GuestPassResult } from "./guest-pass.js";
+import { issueGuestPass, loadCachedGuestPass } from "./guest-pass.js";
+import { inferContextFromUrl } from "./context-inference.js";
+import { postDeclareVisit } from "./declare-visit.js";
+import { postReportOutcome } from "./report-outcome.js";
+import type {
+  BadgeEventSource,
+  BadgeOutcome,
+  BadgeVisitContext,
+  DeclareResult,
+  FrictionReason,
+  OutcomeResult,
+} from "./types.js";
 
 export type IdentityType = "guest" | "verified" | "offline";
 
@@ -105,5 +116,62 @@ export class Badge {
   /** Flush pending telemetry and release resources */
   destroy(): void {
     // v1: no-op — telemetry flush will be wired in when reportEvent lands
+  }
+
+  startRun(): string {
+    return randomUUID();
+  }
+
+  async declareVisit(args: {
+    merchant: string;
+    runId?: string;
+    url?: string;
+    context?: BadgeVisitContext;
+    source?: BadgeEventSource;
+  }): Promise<DeclareResult> {
+    const runId = args.runId ?? this.startRun();
+    const source = args.source ?? "sdk";
+    if (this.identityType === "offline") {
+      return {
+        recordedAs: "offline",
+        source,
+        merchant: args.merchant,
+        runId,
+      };
+    }
+
+    const context = args.context ?? (args.url ? inferContextFromUrl(args.url) : undefined);
+    return postDeclareVisit(this.token, {
+      merchant: args.merchant,
+      runId,
+      ...(args.url ? { url: args.url } : {}),
+      ...(context ? { context } : {}),
+      source,
+    });
+  }
+
+  async reportOutcome(args: {
+    merchant: string;
+    runId: string;
+    outcome: BadgeOutcome;
+    frictionReason?: FrictionReason;
+    detail?: string;
+  }): Promise<OutcomeResult> {
+    if (this.identityType === "offline") {
+      return {
+        recordedAs: "offline",
+        merchant: args.merchant,
+        runId: args.runId,
+      };
+    }
+
+    return postReportOutcome(this.token, {
+      installId: this.installId,
+      merchant: args.merchant,
+      runId: args.runId,
+      outcome: args.outcome,
+      ...(args.frictionReason ? { frictionReason: args.frictionReason } : {}),
+      ...(args.detail ? { detail: args.detail } : {}),
+    });
   }
 }

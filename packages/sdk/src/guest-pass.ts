@@ -10,6 +10,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { getEnvApiUrl } from "./env.js";
 
+
 const DEFAULT_API_URL = "https://www.kyalabs.io";
 const GUEST_PASS_TIMEOUT_MS = 5_000;
 const KYA_DIR = join(homedir(), ".kya");

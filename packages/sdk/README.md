@@ -21,10 +21,23 @@ Requires Node.js >= 20.
 import { Badge } from '@kyalabs/badge-sdk'
 
 const badge = await Badge.init()
+const runId = badge.startRun()
 
 // Attach to outgoing requests
 const headers = badge.headers()
 // { "Kya-Token": "gp_v1_..." }
+
+await badge.declareVisit({
+  merchant: 'merchant.test',
+  runId,
+  url: 'https://merchant.test/cart',
+})
+
+await badge.reportOutcome({
+  merchant: 'merchant.test',
+  runId,
+  outcome: 'not_denied',
+})
 
 // Identity state
 badge.identityType  // "guest" | "verified" | "offline"
@@ -92,6 +105,44 @@ badge.headers()
 // { "Kya-Token": "gp_v1_abc..." }
 ```
 
+### `badge.startRun()`
+
+Returns a UUID you can use to pair declaration and outcome events.
+
+### `badge.declareVisit(args)`
+
+Declare an agent visit at a merchant and write a `declared` badge event.
+
+```typescript
+const runId = badge.startRun()
+
+await badge.declareVisit({
+  merchant: 'merchant.test',
+  runId,
+  url: 'https://merchant.test/cart',
+  // or context: 'arrival' | 'addtocart' | 'checkout'
+  // source: 'sdk' | 'mcp' | 'radar' | 'inferred' (default: 'sdk')
+})
+```
+
+If `context` is omitted, the SDK infers it from the URL (`/cart` → `addtocart`, `/checkout` → `checkout`, otherwise `arrival`).
+
+### `badge.reportOutcome(args)`
+
+Report the agent-observed outcome for a previously declared run. This writes `sampling_complete` through the existing anonymous report path so kyaScore recompute still triggers for the install ID.
+
+```typescript
+await badge.reportOutcome({
+  merchant: 'merchant.test',
+  runId,
+  outcome: 'not_denied', // or 'denied' | 'unparseable'
+  frictionReason: 'merchant_rejection', // optional
+  detail: 'CAPTCHA challenge on checkout', // optional free-text
+})
+```
+
+This is the agent point-of-view outcome only. Merchant-side canonical acceptance or denial is authored separately by the verification/middleware path.
+
 ### `badge.identityType`
 
 Current identity tier: `"guest"` (API-issued guest pass), `"verified"` (device auth completed), or `"offline"` (API unreachable, local-only).
@@ -111,7 +162,7 @@ const token = await enrollAndCacheBadgeToken('store.example.com')
 // "kya_abc123..."
 ```
 
-**Important:** The badge token is only returned on the first enrollment per merchant per day. Re-enrollment on the same day returns `null` (the token hash is one-way). Persist the token from the first call.
+**Important:** The badge token is only returned on the first enrollment per merchant per day. The SDK now persists successful enrollments to `~/.kya/badge_tokens.json`, so same-day reruns can recover the merchant token without another API response.
 
 ### `issueGuestPass(installId, platform?, agentClient?, badgeVersion?)`
 
@@ -144,6 +195,7 @@ Full data practices: [kyalabs.io/trust](https://kyalabs.io/trust)
 ~/.kya/
   install_id      # persistent UUID
   guest_token     # cached guest pass { token, expiresAt }
+  badge_tokens.json  # cached merchant badge tokens keyed by install_id:merchant
 ```
 
 ## Status
