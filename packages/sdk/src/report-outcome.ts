@@ -9,6 +9,7 @@ interface ReportOutcomeArgs {
   outcome: BadgeOutcome;
   frictionReason?: FrictionReason;
   detail?: string;
+  source?: string;
 }
 
 interface ReportOutcomeResponse {
@@ -39,7 +40,7 @@ export async function postReportOutcome(
         trip_id: args.runId,
         outcome: args.outcome,
         outcome_source: "explicit",
-        source: "sdk",
+        source: args.source ?? "sdk",
         ...(args.frictionReason ? { friction_reason: args.frictionReason } : {}),
         ...(args.detail ? { detail: args.detail } : {}),
         timestamp: Date.now(),

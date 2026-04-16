@@ -156,6 +156,7 @@ export class Badge {
     outcome: BadgeOutcome;
     frictionReason?: FrictionReason;
     detail?: string;
+    source?: BadgeEventSource;
   }): Promise<OutcomeResult> {
     if (this.identityType === "offline") {
       return {
@@ -172,6 +173,7 @@ export class Badge {
       outcome: args.outcome,
       ...(args.frictionReason ? { frictionReason: args.frictionReason } : {}),
       ...(args.detail ? { detail: args.detail } : {}),
+      ...(args.source ? { source: args.source } : {}),
     });
   }
 }
