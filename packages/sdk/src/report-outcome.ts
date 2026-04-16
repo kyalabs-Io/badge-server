@@ -39,6 +39,7 @@ export async function postReportOutcome(
         trip_id: args.runId,
         outcome: args.outcome,
         outcome_source: "explicit",
+        source: "sdk",
         ...(args.frictionReason ? { friction_reason: args.frictionReason } : {}),
         ...(args.detail ? { detail: args.detail } : {}),
         timestamp: Date.now(),
