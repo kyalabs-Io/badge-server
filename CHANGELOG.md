@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.0.1] - 2026-05-13
+
+### Security
+- Override transitive `ip-address` 10.1.0 → 10.2.0 (GHSA-v2v4-37r5-5v8g XSS in Address6) — `express-rate-limit` pins this exactly, so `overrides` is required.
+- Lift `hono` 4.12.14 → 4.12.18 via `npm update` (GHSA-hm8q-7f3q-5f36 JWT exp/nbf/iat bypass, GHSA-p77w-8qqv-26rm Vary: Authorization cache leak, GHSA-9vqf-7f2p-gf9v bodyLimit bypass, GHSA-69xw-7hcm-h432 JSX XSS, GHSA-qp7p-654g-cw7p CSS injection).
+- Lift `fast-uri` 3.1.0 → 3.1.2 via `npm update` (GHSA-q3j6-qgpj-74h6 path traversal, GHSA-v39h-62p7-jpjc host confusion).
+- Lift dev `postcss` 8.5.12 → 8.5.14 via `npm update`.
+- All four vulnerable chains entered via `@modelcontextprotocol/sdk`. Sentinel daily scan 2026-05-13 reported badge-server as already patched, but the previous `hono@4.12.14` was still ≤4.12.17; this PR closes the gap.
+
 ## [2.6.2] - 2026-03-28
 
 ### Fixed
